@@ -200,6 +200,8 @@ void MainWindow::defineActions()
     shortcutHandler->defineAction(QLatin1String("action_reply_all"), QLatin1String("mail-reply-all"), tr("Reply to &All"), tr("Ctrl+Alt+Shift+R"));
     shortcutHandler->defineAction(QLatin1String("action_reply_list"), QLatin1String("mail-reply-list"), tr("Reply to &Mailing List"), tr("Ctrl+L"));
     shortcutHandler->defineAction(QLatin1String("action_reply_guess"), QString(), tr("Reply by &Guess"), tr("Ctrl+R"));
+    shortcutHandler->defineAction(QLatin1String("action_forward_inline"), QLatin1String("mail-forward"), tr("&Forward Inline"), tr("Shift+F"));
+    shortcutHandler->defineAction(QLatin1String("action_forward_attachment"), QLatin1String("mail-forward-attachment"), tr("Forward As Attachment"), tr("F"));
     shortcutHandler->defineAction(QLatin1String("action_contact_editor"), QLatin1String("contact-unknown"), tr("Address Book..."));
     shortcutHandler->defineAction(QLatin1String("action_network_offline"), QLatin1String("network-offline"), tr("&Offline"));
     shortcutHandler->defineAction(QLatin1String("action_network_expensive"), QLatin1String("network-expensive"), tr("&Expensive Connection"));
@@ -322,6 +324,8 @@ void MainWindow::createActions()
 
     expunge = ShortcutHandler::instance()->createAction(QLatin1String("action_expunge"), this, SLOT(slotExpunge()), this);
 
+    m_forwardInline = ShortcutHandler::instance()->createAction(QLatin1String("action_forward_inline"), this, SLOT(slotForwardInline()), this);
+    m_forwardAsAttachment = ShortcutHandler::instance()->createAction(QLatin1String("action_forward_attachment"), this, SLOT(slotForwardAsAttachment()), this);
     markAsRead = ShortcutHandler::instance()->createAction(QLatin1String("action_mark_as_read"), this);
     markAsRead->setCheckable(true);
     msgListWidget->tree->addAction(markAsRead);
@@ -488,8 +492,17 @@ void MainWindow::createActions()
     m_replyButton->setMenu(m_replyMenu);
     m_replyButton->setDefaultAction(m_replyPrivate);
 
+    m_forwardButton = new QToolButton(this);
+    m_forwardButton->setPopupMode(QToolButton::MenuButtonPopup);
+    m_forwardMenu = new QMenu(m_forwardButton);
+    m_forwardMenu->addAction(m_forwardAsAttachment);
+    m_forwardMenu->addAction(m_forwardInline);
+    m_forwardButton->setMenu(m_forwardMenu);
+    m_forwardButton->setDefaultAction(m_forwardAsAttachment);
+
     m_mainToolbar->addWidget(m_composeButton);
     m_mainToolbar->addWidget(m_replyButton);
+    m_mainToolbar->addWidget(m_forwardButton);
     m_mainToolbar->addAction(expunge);
     m_mainToolbar->addSeparator();
     m_mainToolbar->addAction(markAsRead);
@@ -525,6 +538,8 @@ void MainWindow::createMenus()
     ADD_ACTION(imapMenu, m_replyAll);
     ADD_ACTION(imapMenu, m_replyAllButMe);
     ADD_ACTION(imapMenu, m_replyList);
+    ADD_ACTION(imapMenu, m_forwardAsAttachment);
+    ADD_ACTION(imapMenu, m_forwardInline);
     ADD_ACTION(imapMenu, expunge);
     imapMenu->addSeparator()->setText(tr("Network Access"));
     QMenu *netPolicyMenu = imapMenu->addMenu(tr("&Network Access"));
@@ -1472,6 +1487,8 @@ void MainWindow::updateActionsOnlineOffline(bool online)
         m_replyAll->setEnabled(false);
         m_replyAllButMe->setEnabled(false);
         m_replyList->setEnabled(false);
+        m_forwardInline->setEnabled(false);
+        m_forwardAsAttachment->setEnabled(false);
     }
 }
 
@@ -1498,6 +1515,10 @@ void MainWindow::slotUpdateMessageActions()
     } else {
         m_replyButton->setDefaultAction(m_replyPrivate);
     }
+
+    m_forwardInline->setEnabled(m_messageWidget->messageView->currentMessage().isValid());
+    m_forwardAsAttachment->setEnabled(m_messageWidget->messageView->currentMessage().isValid());
+
 }
 
 void MainWindow::scrollMessageUp()
@@ -1536,6 +1557,16 @@ void MainWindow::slotReplyGuess()
     } else {
         slotReplyTo();
     }
+}
+
+void MainWindow::slotForwardInline()
+{
+    m_messageWidget->messageView->forward(this, Composer::FORWARD_INLINE);
+}
+
+void MainWindow::slotForwardAsAttachment()
+{
+    m_messageWidget->messageView->forward(this, Composer::FORWARD_AS_ATTACHMENT);
 }
 
 void MainWindow::slotComposeMailUrl(const QUrl &url)
@@ -1611,7 +1642,8 @@ operations.
 */
 ComposeWidget *MainWindow::invokeComposeDialog(const QString &subject, const QString &body,
                                                const RecipientsType &recipients, const QList<QByteArray> &inReplyTo,
-                                               const QList<QByteArray> &references, const QModelIndex &replyingToMessage)
+                                               const QList<QByteArray> &references, const QModelIndex &replyingToMessage,
+                                               const QModelIndex &forwardingMessage)
 {
     using namespace Common;
     QString method = m_settings->value(SettingsNames::msaMethodKey).toString();
@@ -1656,7 +1688,7 @@ ComposeWidget *MainWindow::invokeComposeDialog(const QString &subject, const QSt
         referencesSize -= trimmedReferences.takeAt(1).size() + lineOverhead;
     }
 
-    w->setData(recipients, subject, body, inReplyTo, trimmedReferences, replyingToMessage);
+    w->setData(recipients, subject, body, inReplyTo, trimmedReferences, replyingToMessage, forwardingMessage);
     Util::centerWidgetOnScreen(w);
     w->show();
     return w;

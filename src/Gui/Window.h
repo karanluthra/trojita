@@ -99,7 +99,8 @@ public:
                                        const RecipientsType &recipients = RecipientsType(),
                                        const QList<QByteArray> &inReplyTo = QList<QByteArray>(),
                                        const QList<QByteArray> &references = QList<QByteArray>(),
-                                       const QModelIndex &replyingToMessage = QModelIndex());
+                                       const QModelIndex &replyingToMessage = QModelIndex(),
+                                       const QModelIndex &forwardingMessage = QModelIndex());
     QSize sizeHint() const;
 
     Imap::Mailbox::Model *imapModel() const;
@@ -143,6 +144,8 @@ private slots:
     void slotReplyAll();
     void slotReplyList();
     void slotReplyGuess();
+    void slotForwardInline();
+    void slotForwardAsAttachment();
     void slotUpdateMessageActions();
     void handleMarkAsRead(bool);
     void handleMarkAsDeleted(bool);
@@ -280,6 +283,8 @@ private:
     QAction *m_replyAll;
     QAction *m_replyList;
     QAction *m_replyGuess;
+    QAction *m_forwardInline;
+    QAction *m_forwardAsAttachment;
     QAction *expunge;
     QAction *createChildMailbox;
     QAction *createTopMailbox;
@@ -323,6 +328,8 @@ private:
     QToolBar *m_mainToolbar;
     QToolButton *m_replyButton;
     QMenu *m_replyMenu;
+    QToolButton *m_forwardButton;
+    QMenu *m_forwardMenu;
     QToolButton *m_composeButton;
     QMenu *m_composeMenu;
 

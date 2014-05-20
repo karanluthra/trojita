@@ -56,6 +56,7 @@
 #include "Imap/Model/MsgListModel.h"
 #include "Imap/Model/NetworkWatcher.h"
 #include "Imap/Network/MsgPartNetAccessManager.h"
+#include "Imap/Parser/MailAddress.h"
 
 namespace Gui
 {
@@ -374,6 +375,63 @@ void MessageView::reply(MainWindow *mainWindow, Composer::ReplyMode mode)
         if (!err.isEmpty())
             QMessageBox::warning(w, tr("Cannot Determine Recipients"), err);
     }
+}
+
+void MessageView::forward(MainWindow *mainWindow, Composer::ForwardMode mode)
+{
+    if(!message.isValid()) {
+        return;
+    }
+
+    // The Message-Id of the original message might have been empty; be sure we can handle that
+    QByteArray messageId = message.data(Imap::Mailbox::RoleMessageMessageId).toByteArray();
+    QList<QByteArray> messageIdList;
+    if (!messageId.isEmpty()) {
+        messageIdList.append(messageId);
+    }
+
+    ComposeWidget *w = mainWindow->invokeComposeDialog(
+                Composer::Util::forwardSubject(message.data(Imap::Mailbox::RoleMessageSubject).toString()),
+                mode == Composer::FORWARD_INLINE ? forwardText() : QString(),
+                QList<QPair<Composer::RecipientKind,QString> >(),
+                QList<QByteArray>(),
+                message.data(Imap::Mailbox::RoleMessageHeaderReferences).value<QList<QByteArray> >() + messageIdList,
+                QModelIndex(),
+                message);
+    if(!w) {
+        return;
+    }
+    w->setForwardMode(mode);
+}
+
+QString MessageView::forwardText() const
+{
+    if (const AbstractPartWidget *w = dynamic_cast<const AbstractPartWidget *>(viewer)) {
+        const Imap::Message::Envelope &e = message.data(Imap::Mailbox::RoleMessageEnvelope).value<Imap::Message::Envelope>();
+        QStringList header;
+        if (!e.from.isEmpty()) {
+            header << tr("From: %1").arg(QString(Imap::Message::MailAddress::prettyList(e.from, Imap::Message::MailAddress::FORMAT_READABLE)));
+        }
+        if (!e.to.isEmpty()) {
+            header << tr("To: %1").arg(QString(Imap::Message::MailAddress::prettyList(e.to, Imap::Message::MailAddress::FORMAT_READABLE)));
+        }
+        if (!e.replyTo.isEmpty()) {
+            header << tr("Reply-To: %1").arg(QString(Imap::Message::MailAddress::prettyList(e.replyTo, Imap::Message::MailAddress::FORMAT_READABLE)));
+        }
+        if (!e.cc.isEmpty()) {
+            header << tr("Cc: %1").arg(QString(Imap::Message::MailAddress::prettyList(e.cc, Imap::Message::MailAddress::FORMAT_READABLE)));
+        }
+        if (e.date.isValid()) {
+            header << tr("Date: %1").arg(e.date.toLocalTime().toString(Qt::SystemLocaleLongDate));
+        }
+        if (!e.subject.isEmpty()) {
+            header << tr("Subject: %1").arg(e.subject);
+        }
+        header << QString() << QString(); //Add two newlines to seperate the header from the body
+
+        return tr("-------- Forwarded Message --------\n") + header.join("\n") + w->quoteMe();
+    }
+    return QString();
 }
 
 void MessageView::externalsRequested(const QUrl &url)

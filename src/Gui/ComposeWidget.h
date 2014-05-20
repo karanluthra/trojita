@@ -73,7 +73,8 @@ public:
                  const QString &subject,
                  const QString &body,
                  const QList<QByteArray> &inReplyTo, const QList<QByteArray> &references,
-                 const QModelIndex &replyingToMessage);
+                 const QModelIndex &replyingToMessage,
+                 const QModelIndex &forwardingMessage);
     void loadDraft(const QString &path);
 
 protected:
@@ -83,6 +84,7 @@ protected:
 
 public slots:
     bool setReplyMode(const Composer::ReplyMode mode);
+    bool setForwardMode(const Composer::ForwardMode mode);
 
 private slots:
     void calculateMaxVisibleRecipients();
@@ -161,6 +163,7 @@ private:
     QList<QByteArray> m_inReplyTo;
     QList<QByteArray> m_references;
     QPersistentModelIndex m_replyingToMessage;
+    QPersistentModelIndex m_forwardingMessage;
 
     bool m_appendUidReceived;
     uint m_appendUidValidity;

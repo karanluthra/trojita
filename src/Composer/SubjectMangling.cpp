@@ -26,6 +26,8 @@
 
 #include "SubjectMangling.h"
 
+#define PREFIX_ML "(?:(\\[[^\\]]+\\]\\s*)?)"
+
 namespace Composer {
 namespace Util {
 
@@ -35,11 +37,10 @@ QString replySubject(const QString &subject)
     // These operations should *not* check for internationalized variants of "Re"; these are evil.
 
 #define RE_PREFIX_RE "(?:(?:Re:\\s*)*)"
-#define RE_PREFIX_ML "(?:(\\[[^\\]]+\\]\\s*)?)"
 
     static QRegExp rePrefixMatcher(QLatin1String("^"
                                                  RE_PREFIX_RE // a sequence of "Re: " prefixes
-                                                 RE_PREFIX_ML // something like a mailing list prefix
+                                                 PREFIX_ML // something like a mailing list prefix
                                                  RE_PREFIX_RE // a sequence of "Re: " prefixes
                                                  ), Qt::CaseInsensitive);
     rePrefixMatcher.setPatternSyntax(QRegExp::RegExp2);
@@ -69,6 +70,48 @@ QString replySubject(const QString &subject)
 
         return correctedPrefix + mlPrefix + baseSubject;
     }
+}
+
+/** @short Prepare a subject to be used when forwarding a message */
+QString forwardSubject(const QString &subject)
+{
+
+#define FWD_PREFIX_FWD "(?:(?:(?:fwd|fw):\\s*)*)"
+
+    static QRegExp fwdPrefixMatcher(QLatin1String("^"
+                                                 FWD_PREFIX_FWD // a sequence of "Fwd: " prefixes
+                                                 PREFIX_ML // something like a mailing list prefix
+                                                 FWD_PREFIX_FWD // a sequence of "Fwd: " prefixes
+                                                 ), Qt::CaseInsensitive);
+    fwdPrefixMatcher.setPatternSyntax(QRegExp::RegExp2);
+    QLatin1String correctedPrefix("Fwd: ");
+
+    if (fwdPrefixMatcher.indexIn(subject) == -1) {
+        // Our regular expression has failed, so better play it safe and blindly prepend "Fwd: "
+        return correctedPrefix + subject;
+    } else {
+        QStringList listPrefixes;
+        int pos = 0;
+        int oldPos = 0;
+        while ((pos = fwdPrefixMatcher.indexIn(subject, pos, QRegExp::CaretAtOffset)) != -1) {
+            if (fwdPrefixMatcher.matchedLength() == 0)
+                break;
+            pos += fwdPrefixMatcher.matchedLength();
+            if (!listPrefixes.contains(fwdPrefixMatcher.cap(1)))
+                listPrefixes << fwdPrefixMatcher.cap(1);
+            oldPos = pos;
+        }
+
+        QString mlPrefix = listPrefixes.join(QString()).trimmed();
+        QString baseSubject = subject.mid(oldPos + qMax(0, fwdPrefixMatcher.matchedLength()));
+
+        if (!mlPrefix.isEmpty() && !baseSubject.isEmpty())
+            mlPrefix += QLatin1Char(' ');
+
+        return correctedPrefix + mlPrefix + baseSubject;
+    }
+
+
 }
 
 }

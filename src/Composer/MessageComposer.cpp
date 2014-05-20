@@ -812,4 +812,60 @@ QModelIndex MessageComposer::replyingToMessage() const
     return m_replyingTo;
 }
 
+void MessageComposer::setForwardingMessage(const QModelIndex &index)
+{
+    m_forwarding = index;
+}
+
+QModelIndex MessageComposer::forwardingMessage() const
+{
+    return m_forwarding;
+}
+
+bool MessageComposer::setForwardMode(const ForwardMode mode)
+{
+    switch (mode) {
+    case Composer::FORWARD_INLINE:
+    {
+        QModelIndex rootIndex = m_forwarding.child(0,0);
+        // check if original message had attachments, attach them with the message being composed if true
+        if (rootIndex.data(Imap::Mailbox::RolePartMimeType) == QLatin1String("multipart/mixed")) {
+            QString mailbox = m_forwarding.data(Imap::Mailbox::RoleMailboxName).toString();
+            uint uidValidity = m_forwarding.data(Imap::Mailbox::RoleMailboxUidValidity).toUInt();
+            uint uid = m_forwarding.data(Imap::Mailbox::RoleMessageUid).toUInt();
+
+            beginInsertRows(QModelIndex(), m_attachments.size(), m_attachments.size());
+            for (int i = 1, max = rootIndex.model()->rowCount(rootIndex); i < max; i++)
+            {
+                QModelIndex partIndex = rootIndex.child(i,0);
+                QScopedPointer<AttachmentItem> attachment(new ImapPartAttachmentItem(m_model, mailbox, uidValidity, uid,
+                                                              partIndex.data(Imap::Mailbox::RolePartPathToPart).toString()));
+                if (m_shouldPreload) {
+                    attachment->preload();
+                }
+                m_attachments << attachment.take();
+            }
+            endInsertRows();
+        }
+        break;
+    }
+    case Composer::FORWARD_AS_ATTACHMENT:
+    {
+        beginInsertRows(QModelIndex(), m_attachments.size(), m_attachments.size());
+        QString mailbox = m_forwarding.data(Imap::Mailbox::RoleMailboxName).toString();
+        uint uidValidity = m_forwarding.data(Imap::Mailbox::RoleMailboxUidValidity).toUInt();
+        uint uid = m_forwarding.data(Imap::Mailbox::RoleMessageUid).toUInt();
+        QScopedPointer<AttachmentItem> attachment(new ImapMessageAttachmentItem(m_model, mailbox, uidValidity, uid));
+        if (m_shouldPreload) {
+            attachment->preload();
+        }
+        attachment->setContentDispositionMode(CDN_INLINE);
+        m_attachments << attachment.take();
+        endInsertRows();
+        break;
+    }
+
+    }
+    return true;
+}
 }

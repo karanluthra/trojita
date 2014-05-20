@@ -72,6 +72,7 @@ public:
 
     void setNetworkWatcher(Imap::Mailbox::NetworkWatcher *netWatcher);
     void reply(MainWindow *mainWindow, Composer::ReplyMode mode);
+    void forward(MainWindow *mainWindow, Composer::ForwardMode);
     QModelIndex currentMessage() const;
 public slots:
     void setMessage(const QModelIndex &index);
@@ -103,6 +104,7 @@ private:
     bool eventFilter(QObject *object, QEvent *event);
     Imap::Message::Envelope envelope() const;
     QString quoteText() const;
+    QString forwardText() const;
 
     QWidget *viewer;
     QWidget *headerSection;

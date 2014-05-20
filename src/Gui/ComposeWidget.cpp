@@ -412,7 +412,8 @@ void ComposeWidget::setUiWidgetsEnabled(const bool enabled)
 
 void ComposeWidget::setData(const QList<QPair<Composer::RecipientKind, QString> > &recipients,
                             const QString &subject, const QString &body, const QList<QByteArray> &inReplyTo,
-                            const QList<QByteArray> &references, const QModelIndex &replyingToMessage)
+                            const QList<QByteArray> &references, const QModelIndex &replyingToMessage,
+                            const QModelIndex &forwardingMessage)
 {
     for (int i = 0; i < recipients.size(); ++i) {
         addRecipient(i, recipients.at(i).first, recipients.at(i).second);
@@ -425,6 +426,7 @@ void ComposeWidget::setData(const QList<QPair<Composer::RecipientKind, QString> 
     m_messageEverEdited = wasEdited;
     m_inReplyTo = inReplyTo;
     m_references = references;
+    m_forwardingMessage = forwardingMessage;
     m_replyingToMessage = replyingToMessage;
     if (m_replyingToMessage.isValid()) {
         m_markButton->show();
@@ -442,6 +444,7 @@ void ComposeWidget::setData(const QList<QPair<Composer::RecipientKind, QString> 
         m_actionInReplyTo->setToolTip(QString());
         m_actionStandalone->trigger();
     }
+    m_submission->composer()->setForwardingMessage(m_forwardingMessage);
 
     int row = -1;
     bool ok = Composer::Util::chooseSenderIdentityForReply(m_mainWindow->senderIdentitiesModel(), replyingToMessage, row);
@@ -1048,6 +1051,11 @@ bool ComposeWidget::setReplyMode(const Composer::ReplyMode mode)
     ui->mailText->setFocus();
 
     return true;
+}
+
+bool ComposeWidget::setForwardMode(const Composer::ForwardMode mode)
+{
+    return m_submission->composer()->setForwardMode(mode);
 }
 
 /** local draft serializaton:
