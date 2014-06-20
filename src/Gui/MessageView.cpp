@@ -340,7 +340,7 @@ void MessageView::redirect(MainWindow *mainWindow)
         return;
 
     ComposeWidget::warnIfMsaNotConfigured(
-                ComposeWidget::createRedirect(mainWindow, QModelIndex()), mainWindow);
+                ComposeWidget::createRedirect(mainWindow, message), mainWindow);
 }
 
 void MessageView::reply(MainWindow *mainWindow, Composer::ReplyMode mode)

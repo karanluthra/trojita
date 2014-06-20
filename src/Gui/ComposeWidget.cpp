@@ -42,6 +42,7 @@
 #include "Composer/MessageComposer.h"
 #include "Composer/ReplaceSignature.h"
 #include "Composer/Mailto.h"
+#include "Composer/MessageRedirect.h"
 #include "Composer/SenderIdentitiesModel.h"
 #include "Composer/Submission.h"
 #include "Common/InvokeMethod.h"
@@ -239,6 +240,8 @@ ComposeWidget::ComposeWidget(MainWindow *mainWindow, MSA::MSAFactory *msaFactory
     // Add a blank recipient row to start with
     addRecipient(m_recipients.count(), Composer::ADDRESS_TO, QString());
     ui->envelopeLayout->itemAt(OFFSET_OF_FIRST_ADDRESSEE, QFormLayout::FieldRole)->widget()->setFocus();
+
+    isRedirect = false;
 }
 
 ComposeWidget::~ComposeWidget()
@@ -335,11 +338,15 @@ ComposeWidget *ComposeWidget::createRedirect(MainWindow *mainWindow, const QMode
     if (!msaFactory)
         return 0;
 
-    Q_UNUSED(redirectingMessage);
     ComposeWidget *w = new ComposeWidget(mainWindow, msaFactory);
     w->ui->mailText->hide();
     w->ui->groupBox->hide();
+    w->ui->subject->setText(redirectingMessage.data(Imap::Mailbox::RoleMessageSubject).toString());
     w->setWindowTitle(tr("Redirect Mail"));
+
+    w->isRedirect = true;
+    w->m_redirectingMessage = redirectingMessage;
+
     Util::centerWidgetOnScreen(w);
     w->show();
     return w;
@@ -525,7 +532,30 @@ void ComposeWidget::closeEvent(QCloseEvent *ce)
     ce->accept(); // ultimately close the window
 }
 
+void ComposeWidget::sendRedirect()
+{
+    Composer::MessageRedirect *redirect = new Composer::MessageRedirect(m_redirectingMessage);
 
+    QString errorMessage;
+    Imap::Message::MailAddress fromAddress;
+    Imap::Message::MailAddress::fromPrettyString(fromAddress, ui->sender->currentText());
+
+    QList<QPair<Composer::RecipientKind , Imap::Message::MailAddress> > recipients;
+    parseRecipients(recipients, errorMessage);
+
+    redirect->setData(fromAddress, recipients, QDateTime::currentDateTime());
+
+    QByteArray rawMessageData;
+    QBuffer buf(&rawMessageData);
+    buf.open(QIODevice::WriteOnly);
+
+
+    if (!redirect->asRawMessage(&buf, &errorMessage)) {
+        QMessageBox::critical(this, tr("Redirect Failed"), errorMessage);
+    } else {
+        qDebug() << rawMessageData;
+    }
+}
 
 bool ComposeWidget::buildMessageData()
 {
@@ -583,6 +613,10 @@ bool ComposeWidget::buildMessageData()
 
 void ComposeWidget::send()
 {
+    if (isRedirect) {
+        sendRedirect();
+        return;
+    }
     // Well, Trojita is of course rock solid and will never ever crash :), but experience has shown that every now and then,
     // there is a subtle issue $somewhere. This means that it's probably a good idea to save the draft explicitly -- better
     // than losing some work. It's cheap anyway.

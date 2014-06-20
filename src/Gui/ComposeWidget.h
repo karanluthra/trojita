@@ -137,6 +137,8 @@ private:
     void saveDraft(const QString &path);
     void loadDraft(const QString &path);
 
+    void sendRedirect();
+
     Ui::ComposeWidget *ui;
     QPushButton *sendButton;
     QPushButton *cancelButton;
@@ -170,6 +172,9 @@ private:
     bool m_messageEverEdited;
     bool m_explicitDraft;
     QString m_autoSavePath;
+
+    bool isRedirect;
+    QPersistentModelIndex m_redirectingMessage;
 
     QList<QByteArray> m_inReplyTo;
     QList<QByteArray> m_references;
