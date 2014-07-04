@@ -21,6 +21,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include "SMTP.h"
+#include "SMTPClient/SMTPClient.h"
 
 namespace MSA
 {
@@ -100,9 +101,11 @@ void SMTP::sendMail(const QByteArray &from, const QList<QByteArray> &to, const Q
 void SMTP::sendContinueGotPassword()
 {
     isWaitingForPassword = false;
-    if (encryptedConnect)
-        qwwSmtp->connectToHostEncrypted(host, port);
-    else
+    if (encryptedConnect) {
+        //qwwSmtp->connectToHostEncrypted(host, port);
+        SMTPClient *client = new SMTPClient(this, host, port);
+        Q_UNUSED(client);
+    } else
         qwwSmtp->connectToHost(host, port);
     if (startTls)
         qwwSmtp->startTls();
