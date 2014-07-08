@@ -15,7 +15,10 @@ enum class State {
     CONNECTING,
     CONNECTED,
     HANDSHAKE,
+    AUTH,
     MAIL,
+    RCPT,
+    DATA,
 };
 
 class SMTPClient : public QObject
@@ -23,14 +26,17 @@ class SMTPClient : public QObject
     Q_OBJECT
 public:
     explicit SMTPClient(QObject *parent, QString &host, quint16 port);
+    // TODO: Convert these enums to C++11 style enum classes
     enum Option {
         NoOptions,
         StartTlsOption,
         SizeOption,
         PipeliningOption,
         EightBitMimeOption,
+        DSNOption,
         AuthOption,
     };
+    // TODO: Convert these enums to C++11 style enum classes
     enum AuthMode {
         AuthNone,
         AuthPlain,
@@ -39,16 +45,30 @@ public:
     Q_DECLARE_FLAGS (Options, Option)
     Q_DECLARE_FLAGS (AuthModes, AuthMode)
 
+    void setAuthParams(QString &user, QString &password);
+    void setMailParams(QByteArray &from, QByteArray &to, QByteArray &data);
+
 private slots:
     void slotEncrypted();
     void slotReadyRead();
     void parseServerResponse();
-    void sendEhlo();
     void parseCapabilities(QString &response);
 
 private:
+
+    void sendEhlo();
+    void sendAuth(bool ready);
+    void sendMailFrom();
+    void sendRcpt();
+    void sendData(bool ready);
+
     QString m_host;
     quint16 m_port;
+    QString m_user;
+    QString m_password;
+    QByteArray m_from;
+    QByteArray m_to;
+    QByteArray m_data;
     Streams::SslTlsSocket *m_socket;
     MSA::State m_state;
     QByteArray line;

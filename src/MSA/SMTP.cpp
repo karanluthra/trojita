@@ -104,7 +104,9 @@ void SMTP::sendContinueGotPassword()
     if (encryptedConnect) {
         //qwwSmtp->connectToHostEncrypted(host, port);
         SMTPClient *client = new SMTPClient(this, host, port);
-        Q_UNUSED(client);
+        client->setAuthParams(user, pass);
+        // FIXME: @karan: extend this to handle multiple recipients
+        client->setMailParams(from, to.front(), data);
     } else
         qwwSmtp->connectToHost(host, port);
     if (startTls)
