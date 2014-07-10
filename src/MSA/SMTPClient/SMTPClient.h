@@ -21,6 +21,19 @@ enum class State {
     DATA,
 };
 
+struct Response
+{
+    int status;
+    struct EnhancedStatus
+    {
+        int sclass;
+        int subject;
+        int detail;
+    } enhancedStatus;
+    QString text;
+    bool isMultiline;
+};
+
 class SMTPClient : public QObject
 {
     Q_OBJECT
@@ -51,8 +64,9 @@ public:
 private slots:
     void slotEncrypted();
     void slotReadyRead();
-    void parseServerResponse();
+    void parseServerResponse(QByteArray &line);
     void parseCapabilities(QString &response);
+    Response lowLevelParser(QByteArray &line);
 
 private:
 
@@ -72,6 +86,7 @@ private:
     Streams::SslTlsSocket *m_socket;
     MSA::State m_state;
     QByteArray line;
+    Response m_response;
 
     Options m_options;
     AuthModes m_authModes;

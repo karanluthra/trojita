@@ -31,8 +31,8 @@ void SMTPClient::slotEncrypted()
 void SMTPClient::slotReadyRead()
 {
     while (m_socket->canReadLine()) {
-        line = m_socket->readLine();
-        parseServerResponse();
+        QByteArray line = m_socket->readLine();
+        parseServerResponse(line);
         qDebug() << "S: " << line;
     }
 }
@@ -59,43 +59,73 @@ void SMTPClient::setMailParams(QByteArray &from, QList<QByteArray> &to, QByteArr
     m_data = data;
 }
 
-
-void SMTPClient::parseServerResponse()
+Response SMTPClient::lowLevelParser(QByteArray &line)
 {
-    QRegExp rx(QLatin1String("(\\d+)-(.*)\n"));        // multiline response (aka 250-XYZ)
-    QRegExp rxlast(QLatin1String("(\\d+) (.*)\n"));    // single or last line response (aka 250 XYZ)
+    // TODO: Add tests for this parser in the unit test suite
 
-    QString response = QString::fromUtf8(line);
-    bool mid = rx.exactMatch(response);
-    bool last = rxlast.exactMatch(response);
-    Q_UNUSED(last)
-    int status = mid? rx.cap(1).toInt() : rxlast.cap(1).toInt();
+    Response response;
+    QString responseLine = QString::fromUtf8(line);
+
+    QRegExp rxMulti(QLatin1String("^(\\d+)-((\\d+).(\\d+).(\\d+) )?(.*)\n"));        // multiline response (aka 250-XYZ)
+    QRegExp rxSingle(QLatin1String("^(\\d+) ((\\d+).(\\d+).(\\d+) )?(.*)\n"));    // single or last line response (aka 250 XYZ)
+
+    bool multiLine = rxMulti.exactMatch(responseLine);
+    bool singleLine = rxSingle.exactMatch(responseLine);
+
+    if (multiLine) {
+        response.status = rxMulti.cap(1).toInt();
+        response.text = rxMulti.cap(6);
+        if (!rxMulti.cap(2).isEmpty()) {
+            response.enhancedStatus.sclass = rxMulti.cap(3).toInt();
+            response.enhancedStatus.subject = rxMulti.cap(4).toInt();
+            response.enhancedStatus.detail = rxMulti.cap(5).toInt();
+        }
+    } else if (singleLine) {
+        response.status = rxSingle.cap(1).toInt();
+        response.text = rxSingle.cap(6);
+        if (!rxSingle.cap(2).isEmpty()) {
+            response.enhancedStatus.sclass = rxSingle.cap(3).toInt();
+            response.enhancedStatus.subject = rxSingle.cap(4).toInt();
+            response.enhancedStatus.detail = rxSingle.cap(5).toInt();
+        }
+    } else {
+        Q_ASSERT(false);
+    }
+
+    response.isMultiline = multiLine;
+
+    return response;
+}
+
+void SMTPClient::parseServerResponse(QByteArray &line)
+{
+    Response response = lowLevelParser(line);
 
     switch (m_state) {
     case State::CONNECTING:
-        if (status == 220) {
+        if (response.status == 220) {
             m_state = State::CONNECTED;
             sendEhlo();
             m_state = State::HANDSHAKE;
         }
         break;
     case State::HANDSHAKE:
-        parseCapabilities(response);
-        if (last) {
+        parseCapabilities(response.text);
+        if (!response.isMultiline) {
             m_state = State::AUTH;
             sendAuth(false);
         }
         break;
     case State::AUTH:
-        if (status == 334)
+        if (response.status == 334)
             sendAuth(true);
-        if (status == 235) {
+        if (response.status == 235) {
             m_state = State::MAIL;
             sendMailFrom();
         }
         break;
     case State::MAIL:
-        if (status == 250) {
+        if (response.status == 250) {
             m_state = State::RCPT;
             if (!m_to.isEmpty()) {
                 sendRcpt(m_to.front());
@@ -103,7 +133,7 @@ void SMTPClient::parseServerResponse()
         }
         break;
     case State::RCPT:
-        if (status == 250) {
+        if (response.status == 250) {
             m_to.removeFirst();
             if (!m_to.isEmpty()) {
                 sendRcpt(m_to.front());
@@ -112,11 +142,11 @@ void SMTPClient::parseServerResponse()
                 sendData(false);
             }
         } else {
-            qDebug() << "Error: " << status << line;
+            qDebug() << "Error: " << line;
         }
         break;
     case State::DATA:
-        if (status == 354) {
+        if (response.status == 354) {
             sendData(true);
         }
         break;
@@ -172,6 +202,7 @@ void SMTPClient::sendAuth(bool ready)
         m_socket->write("\r\n");
     } else {
         m_socket->write("AUTH PLAIN\r\n");
+        qDebug() << "C " << "AUTH PLAIN\r\n";
     }
 }
 
