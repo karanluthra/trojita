@@ -46,7 +46,7 @@ public:
     Q_DECLARE_FLAGS (AuthModes, AuthMode)
 
     void setAuthParams(QString &user, QString &password);
-    void setMailParams(QByteArray &from, QByteArray &to, QByteArray &data);
+    void setMailParams(QByteArray &from, QList<QByteArray> &to, QByteArray &data);
 
 private slots:
     void slotEncrypted();
@@ -59,7 +59,7 @@ private:
     void sendEhlo();
     void sendAuth(bool ready);
     void sendMailFrom();
-    void sendRcpt();
+    void sendRcpt(QByteArray &recipient);
     void sendData(bool ready);
 
     QString m_host;
@@ -67,7 +67,7 @@ private:
     QString m_user;
     QString m_password;
     QByteArray m_from;
-    QByteArray m_to;
+    QList<QByteArray> m_to;
     QByteArray m_data;
     Streams::SslTlsSocket *m_socket;
     MSA::State m_state;

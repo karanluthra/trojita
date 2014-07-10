@@ -106,7 +106,7 @@ void SMTP::sendContinueGotPassword()
         SMTPClient *client = new SMTPClient(this, host, port);
         client->setAuthParams(user, pass);
         // FIXME: @karan: extend this to handle multiple recipients
-        client->setMailParams(from, to.front(), data);
+        client->setMailParams(from, to, data);
     } else
         qwwSmtp->connectToHost(host, port);
     if (startTls)

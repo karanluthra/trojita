@@ -43,10 +43,13 @@ void SMTPClient::setAuthParams(QString &user, QString &password)
     m_password = password;
 }
 
-void SMTPClient::setMailParams(QByteArray &from, QByteArray &to, QByteArray &data)
+void SMTPClient::setMailParams(QByteArray &from, QList<QByteArray> &to, QByteArray &data)
 {
     m_from = "<" + from + ">";
-    m_to = "<" + to + ">";
+
+    Q_FOREACH (QByteArray recipient, to) {
+        m_to.append("<" + recipient + ">");
+    }
 
     //RFC5321 specifies to prepend a period to lines starting with a period in section 4.5.2
     if (data.startsWith('.'))
@@ -65,15 +68,15 @@ void SMTPClient::parseServerResponse()
     QString response = QString::fromUtf8(line);
     bool mid = rx.exactMatch(response);
     bool last = rxlast.exactMatch(response);
-    Q_UNUSED(mid)
     Q_UNUSED(last)
-    int status = mid? rx.cap(1).toInt(): rxlast.cap(1).toInt();
+    int status = mid? rx.cap(1).toInt() : rxlast.cap(1).toInt();
 
     switch (m_state) {
     case State::CONNECTING:
         if (status == 220) {
             m_state = State::CONNECTED;
             sendEhlo();
+            m_state = State::HANDSHAKE;
         }
         break;
     case State::HANDSHAKE:
@@ -94,17 +97,25 @@ void SMTPClient::parseServerResponse()
     case State::MAIL:
         if (status == 250) {
             m_state = State::RCPT;
-            sendRcpt();
+            if (!m_to.isEmpty()) {
+                sendRcpt(m_to.front());
+            }
         }
         break;
     case State::RCPT:
         if (status == 250) {
-            m_state = State::DATA;
-            sendData(false);
+            m_to.removeFirst();
+            if (!m_to.isEmpty()) {
+                sendRcpt(m_to.front());
+            } else {
+                m_state = State::DATA;
+                sendData(false);
+            }
+        } else {
+            qDebug() << "Error: " << status << line;
         }
         break;
     case State::DATA:
-        qDebug() << "Status: " << status;
         if (status == 354) {
             sendData(true);
         }
@@ -145,7 +156,6 @@ void SMTPClient::sendEhlo()
     QByteArray array = QByteArray("EHLO localhost\r\n");
     m_socket->write(array);
     qDebug() << "C: " << array;
-    m_state = State::HANDSHAKE;
 }
 
 void SMTPClient::sendAuth(bool ready)
@@ -173,9 +183,9 @@ void SMTPClient::sendMailFrom()
     qDebug() << "C: " << array;
 }
 
-void SMTPClient::sendRcpt()
+void SMTPClient::sendRcpt(QByteArray &recipient)
 {
-    QByteArray array = QByteArray("RCPT TO:").append(m_to).append("\r\n");
+    QByteArray array = QByteArray("RCPT TO:").append(recipient).append("\r\n");
     m_socket->write(array);
     qDebug() << "C: " << array;
 }
