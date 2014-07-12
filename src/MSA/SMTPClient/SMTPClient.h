@@ -48,6 +48,7 @@ public:
         EightBitMimeOption,
         DSNOption,
         AuthOption,
+        EnhancedStatusCodesOption,
     };
     // TODO: Convert these enums to C++11 style enum classes
     enum AuthMode {

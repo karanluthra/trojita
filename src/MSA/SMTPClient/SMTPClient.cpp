@@ -160,16 +160,18 @@ void SMTPClient::parseCapabilities(QString &response)
 {
     if (response.toLower() == QLatin1String("pipelining"))
         m_options |= Option::PipeliningOption;
-    else if (response.startsWith(QLatin1String("size"))) {
-        m_options |= Option::SizeOption;
-        // parse size value
-    } else if (response.toLower() == QLatin1String("dsn"))
+    else if (response.toLower() == QLatin1String("enhancedstatuscodes"))
+        m_options |= Option::EnhancedStatusCodesOption;
+    else if (response.toLower() == QLatin1String("dsn"))
         m_options |= Option::DSNOption;
     else if (response.toLower() == QLatin1String("starttls"))
         m_options |= Option::StartTlsOption;
     else if (response.toLower() == QLatin1String("8bitmime"))
         m_options |= Option::EightBitMimeOption;
-    else if (response.toLower().startsWith(QLatin1String("auth "))) {
+    else if (response.startsWith(QLatin1String("size"))) {
+        m_options |= Option::SizeOption;
+        // parse size value
+    } else if (response.toLower().startsWith(QLatin1String("auth "))) {
         m_options |= Option::AuthOption;
         QStringList authModes = response.mid(5).split(QLatin1String(" "));
         foreach (const QString &authMode, authModes){
