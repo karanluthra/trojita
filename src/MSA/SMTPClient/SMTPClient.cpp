@@ -8,24 +8,10 @@
 
 namespace MSA {
 
-SMTPClient::SMTPClient(QObject *parent, QString &host, quint16 port) :
+SMTPClient::SMTPClient(QObject *parent) :
     QObject(parent)
 {
-    m_host = host;
-    m_port = port;
     m_state = MSA::State::DISCONNECTED;
-
-    QSslSocket *sslSock = new QSslSocket();
-    m_socket = new Streams::SslTlsSocket(sslSock, m_host, m_port, true);
-    m_state = State::CONNECTING;
-
-    connect(m_socket, SIGNAL(encrypted()), this, SLOT(slotEncrypted()));
-    connect(m_socket, SIGNAL(readyRead()), this, SLOT(slotReadyRead()));
-}
-
-void SMTPClient::slotEncrypted()
-{
-    qDebug() << QDateTime::currentDateTime() << "Encryption Done";
 }
 
 void SMTPClient::slotReadyRead()
@@ -35,6 +21,25 @@ void SMTPClient::slotReadyRead()
         parseServerResponse(line);
         qDebug() << "S: " << line;
     }
+}
+
+/** @short Connect using a SSL connection */
+void SMTPClient::connectToHostEncrypted(QString &host, quint16 port)
+{
+    QSslSocket *sslSock = new QSslSocket();
+    m_socket = new Streams::SslTlsSocket(sslSock, host, port, true);
+    m_state = State::CONNECTING;
+    connect(m_socket, SIGNAL(readyRead()), this, SLOT(slotReadyRead()));
+
+}
+
+/** @short Connect using a plain connection (updradable by STARTTLS) */
+void SMTPClient::connectToHost(QString &host, quint16 port)
+{
+    QSslSocket *sslSock = new QSslSocket();
+    m_socket = new Streams::SslTlsSocket(sslSock, host, port);
+    m_state = State::CONNECTING;
+    connect(m_socket, SIGNAL(readyRead()), this, SLOT(slotReadyRead()));
 }
 
 void SMTPClient::setAuthParams(QString &user, QString &password)
@@ -155,6 +160,8 @@ void SMTPClient::parseServerResponse(QByteArray &line)
         break;
     }
 }
+
+// TODO: error handling, logic improvement
 
 void SMTPClient::parseCapabilities(QString &response)
 {

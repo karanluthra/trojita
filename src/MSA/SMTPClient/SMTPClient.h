@@ -38,7 +38,7 @@ class SMTPClient : public QObject
 {
     Q_OBJECT
 public:
-    explicit SMTPClient(QObject *parent, QString &host, quint16 port);
+    explicit SMTPClient(QObject *parent);
     // TODO: Convert these enums to C++11 style enum classes
     enum Option {
         NoOptions,
@@ -59,11 +59,13 @@ public:
     Q_DECLARE_FLAGS (Options, Option)
     Q_DECLARE_FLAGS (AuthModes, AuthMode)
 
+    void connectToHostEncrypted(QString &host, quint16 port);
+    void connectToHost(QString &host, quint16 port);
+
     void setAuthParams(QString &user, QString &password);
     void setMailParams(QByteArray &from, QList<QByteArray> &to, QByteArray &data);
 
 private slots:
-    void slotEncrypted();
     void slotReadyRead();
     void parseServerResponse(QByteArray &line);
     void parseCapabilities(QString &response);

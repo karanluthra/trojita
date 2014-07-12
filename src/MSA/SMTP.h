@@ -24,6 +24,7 @@
 
 #include "AbstractMSA.h"
 #include "qwwsmtpclient/qwwsmtpclient.h"
+#include "SMTPClient/SMTPClient.h"
 
 namespace MSA
 {
@@ -45,6 +46,7 @@ public slots:
     void handleError(QAbstractSocket::SocketError err, const QString &msg);
 private:
     QwwSmtpClient *qwwSmtp;
+    SMTPClient *client;
     QString host;
     quint16 port;
     bool encryptedConnect;

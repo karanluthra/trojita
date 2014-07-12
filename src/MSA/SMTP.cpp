@@ -21,7 +21,6 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include "SMTP.h"
-#include "SMTPClient/SMTPClient.h"
 
 namespace MSA
 {
@@ -32,18 +31,12 @@ SMTP::SMTP(QObject *parent, const QString &host, quint16 port, bool encryptedCon
     encryptedConnect(encryptedConnect), startTls(startTls), auth(auth),
     user(user), failed(false), isWaitingForPassword(false), sendingMode(MODE_SMTP_INVALID)
 {
-    qwwSmtp = new QwwSmtpClient(this);
-    // FIXME: handle SSL errors properly
-    connect(qwwSmtp, SIGNAL(sslErrors(QList<QSslError>)), qwwSmtp, SLOT(ignoreSslErrors()));
-    connect(qwwSmtp, SIGNAL(connected()), this, SIGNAL(sending()));
-    connect(qwwSmtp, SIGNAL(done(bool)), this, SLOT(handleDone(bool)));
-    connect(qwwSmtp, SIGNAL(socketError(QAbstractSocket::SocketError,QString)),
-            this, SLOT(handleError(QAbstractSocket::SocketError,QString)));
+    client =  new SMTPClient(this);
 }
 
 void SMTP::cancel()
 {
-    qwwSmtp->disconnectFromHost();
+    //qwwSmtp->disconnectFromHost();
     if (!failed) {
         failed = true;
         emit error(tr("Sending of the message was cancelled"));
@@ -60,10 +53,10 @@ void SMTP::handleDone(bool ok)
         emit sent();
     } else {
         failed = true;
-        if (qwwSmtp->errorString().isEmpty())
+        /*if (qwwSmtp->errorString().isEmpty())
             emit error(tr("Sending of the message failed."));
         else
-            emit error(tr("Sending of the message failed with the following error: %1").arg(qwwSmtp->errorString()));
+            emit error(tr("Sending of the message failed with the following error: %1").arg(qwwSmtp->errorString()));*/
     }
 }
 
@@ -101,41 +94,37 @@ void SMTP::sendMail(const QByteArray &from, const QList<QByteArray> &to, const Q
 void SMTP::sendContinueGotPassword()
 {
     isWaitingForPassword = false;
-    if (encryptedConnect) {
-        //qwwSmtp->connectToHostEncrypted(host, port);
-        SMTPClient *client = new SMTPClient(this, host, port);
-        client->setAuthParams(user, pass);
-        // FIXME: @karan: extend this to handle multiple recipients
-        client->setMailParams(from, to, data);
-    } else
-        qwwSmtp->connectToHost(host, port);
-    if (startTls)
-        qwwSmtp->startTls();
+
     if (auth)
-        qwwSmtp->authenticate(user, pass,
-                               (startTls || encryptedConnect) ?
-                               QwwSmtpClient::AuthPlain :
-                               QwwSmtpClient::AuthAny);
+        client->setAuthParams(user, pass);
+
     emit sending(); // FIXME: later
+
     switch (sendingMode) {
     case MODE_SMTP_DATA:
-        {
-            //RFC5321 specifies to prepend a period to lines starting with a period in section 4.5.2
-            if (data.startsWith('.'))
-                data.prepend('.');
-            data.replace("\n.", "\n..");
-            qwwSmtp->sendMail(from, to, data);
-        }
+        client->setMailParams(from, to, data);
         break;
     case MODE_SMTP_BURL:
-        qwwSmtp->sendMailBurl(from, to, data);
+        // TODO: add support for BURL
         break;
     default:
         failed = true;
         emit error(tr("Unknown SMTP mode"));
         break;
     }
-    qwwSmtp->disconnectFromHost();
+
+    // Start the connection now
+    if (encryptedConnect) {
+        client->connectToHostEncrypted(host, port);
+    } else
+        client->connectToHost(host, port);
+
+    if (startTls)
+        // TODO: add startTLS()
+        qt_noop();
+
+    // @karan: why?
+    //qwwSmtp->disconnectFromHost();
 }
 
 bool SMTP::supportsBurl() const
