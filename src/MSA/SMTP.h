@@ -42,7 +42,6 @@ public:
 public slots:
     virtual void cancel();
     virtual void setPassword(const QString &password);
-    void handleDone(bool ok);
     void handleError(QAbstractSocket::SocketError err, const QString &msg);
 private:
     QwwSmtpClient *qwwSmtp;

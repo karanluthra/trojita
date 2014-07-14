@@ -19,6 +19,7 @@ enum class State {
     MAIL,
     RCPT,
     DATA,
+    CLOSING,
 };
 
 struct Response
@@ -61,23 +62,23 @@ public:
 
     void connectToHostEncrypted(QString &host, quint16 port);
     void connectToHost(QString &host, quint16 port);
-
+    void closeConnection();
     void setAuthParams(QString &user, QString &password);
     void setMailParams(QByteArray &from, QList<QByteArray> &to, QByteArray &data);
-
+signals:
+    void submitted();
 private slots:
     void slotReadyRead();
     void parseServerResponse(QByteArray &line);
     void parseCapabilities(QString &response);
     Response lowLevelParser(QByteArray &line);
-
 private:
-
     void sendEhlo();
     void sendAuth(bool ready);
     void sendMailFrom();
     void sendRcpt(QByteArray &recipient);
     void sendData(bool ready);
+    void sendQuit();
 
     QString m_host;
     quint16 m_port;

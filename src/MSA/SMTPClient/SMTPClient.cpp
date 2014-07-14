@@ -18,8 +18,8 @@ void SMTPClient::slotReadyRead()
 {
     while (m_socket->canReadLine()) {
         QByteArray line = m_socket->readLine();
-        parseServerResponse(line);
         qDebug() << "S: " << line;
+        parseServerResponse(line);
     }
 }
 
@@ -40,6 +40,13 @@ void SMTPClient::connectToHost(QString &host, quint16 port)
     m_socket = new Streams::SslTlsSocket(sslSock, host, port);
     m_state = State::CONNECTING;
     connect(m_socket, SIGNAL(readyRead()), this, SLOT(slotReadyRead()));
+}
+
+void SMTPClient::closeConnection()
+{
+    m_socket->close();
+    qDebug() << "connection being closed";
+    m_state = State::DISCONNECTED;
 }
 
 void SMTPClient::setAuthParams(QString &user, QString &password)
@@ -153,7 +160,14 @@ void SMTPClient::parseServerResponse(QByteArray &line)
     case State::DATA:
         if (response.status == 354) {
             sendData(true);
+        } else if (response.status == 250) {
+            emit submitted();
+            m_state = State::CLOSING;
+            sendQuit();
         }
+        break;
+    case State::CLOSING:
+        closeConnection();
         break;
     case State::CONNECTED:
     case State::DISCONNECTED:
@@ -241,6 +255,13 @@ void SMTPClient::sendData(bool ready)
         m_socket->write(array);
         qDebug() << "C: " << array;
     }
+}
+
+void SMTPClient::sendQuit()
+{
+    QByteArray array = QByteArray("QUIT\r\n");
+    m_socket->write(array);
+    qDebug() << "C: " << array;
 }
 
 }

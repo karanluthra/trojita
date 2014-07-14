@@ -32,6 +32,7 @@ SMTP::SMTP(QObject *parent, const QString &host, quint16 port, bool encryptedCon
     user(user), failed(false), isWaitingForPassword(false), sendingMode(MODE_SMTP_INVALID)
 {
     client =  new SMTPClient(this);
+    connect(client, SIGNAL(submitted()), this, SIGNAL(sent()));
 }
 
 void SMTP::cancel()
@@ -40,23 +41,6 @@ void SMTP::cancel()
     if (!failed) {
         failed = true;
         emit error(tr("Sending of the message was cancelled"));
-    }
-}
-
-void SMTP::handleDone(bool ok)
-{
-    if (failed) {
-        // This is a duplicate notification. The QwwSmtpClient is known to send contradicting results, see e.g. bug 321272.
-        return;
-    }
-    if (ok) {
-        emit sent();
-    } else {
-        failed = true;
-        /*if (qwwSmtp->errorString().isEmpty())
-            emit error(tr("Sending of the message failed."));
-        else
-            emit error(tr("Sending of the message failed with the following error: %1").arg(qwwSmtp->errorString()));*/
     }
 }
 
