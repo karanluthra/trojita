@@ -9,18 +9,8 @@
 namespace MSA {
 
 SMTPClient::SMTPClient(QObject *parent) :
-    QObject(parent)
+    QObject(parent), m_state(MSA::State::DISCONNECTED)
 {
-    m_state = MSA::State::DISCONNECTED;
-}
-
-void SMTPClient::slotReadyRead()
-{
-    while (m_socket->canReadLine()) {
-        QByteArray line = m_socket->readLine();
-        qDebug() << "S: " << line;
-        parseServerResponse(line);
-    }
 }
 
 /** @short Connect using a SSL connection */
@@ -30,7 +20,6 @@ void SMTPClient::connectToHostEncrypted(QString &host, quint16 port)
     m_socket = new Streams::SslTlsSocket(sslSock, host, port, true);
     m_state = State::CONNECTING;
     connect(m_socket, SIGNAL(readyRead()), this, SLOT(slotReadyRead()));
-
 }
 
 /** @short Connect using a plain connection (updradable by STARTTLS) */
@@ -69,6 +58,15 @@ void SMTPClient::setMailParams(QByteArray &from, QList<QByteArray> &to, QByteArr
     data.replace("\n.", "\n..");
 
     m_data = data;
+}
+
+void SMTPClient::slotReadyRead()
+{
+    while (m_socket->canReadLine()) {
+        QByteArray line = m_socket->readLine();
+        qDebug() << "S: " << line;
+        parseServerResponse(line);
+    }
 }
 
 Response SMTPClient::lowLevelParser(QByteArray &line)
@@ -111,33 +109,33 @@ Response SMTPClient::lowLevelParser(QByteArray &line)
 
 void SMTPClient::parseServerResponse(QByteArray &line)
 {
-    Response response = lowLevelParser(line);
+    m_response = lowLevelParser(line);
 
     switch (m_state) {
     case State::CONNECTING:
-        if (response.status == 220) {
+        if (m_response.status == 220) {
             m_state = State::CONNECTED;
             sendEhlo();
             m_state = State::HANDSHAKE;
         }
         break;
     case State::HANDSHAKE:
-        parseCapabilities(response.text);
-        if (!response.isMultiline) {
+        parseCapabilities(m_response.text);
+        if (!m_response.isMultiline) {
             m_state = State::AUTH;
             sendAuth(false);
         }
         break;
     case State::AUTH:
-        if (response.status == 334)
+        if (m_response.status == 334)
             sendAuth(true);
-        if (response.status == 235) {
+        if (m_response.status == 235) {
             m_state = State::MAIL;
             sendMailFrom();
         }
         break;
     case State::MAIL:
-        if (response.status == 250) {
+        if (m_response.status == 250) {
             m_state = State::RCPT;
             if (!m_to.isEmpty()) {
                 sendRcpt(m_to.front());
@@ -145,7 +143,7 @@ void SMTPClient::parseServerResponse(QByteArray &line)
         }
         break;
     case State::RCPT:
-        if (response.status == 250) {
+        if (m_response.status == 250) {
             m_to.removeFirst();
             if (!m_to.isEmpty()) {
                 sendRcpt(m_to.front());
@@ -158,9 +156,9 @@ void SMTPClient::parseServerResponse(QByteArray &line)
         }
         break;
     case State::DATA:
-        if (response.status == 354) {
+        if (m_response.status == 354) {
             sendData(true);
-        } else if (response.status == 250) {
+        } else if (m_response.status == 250) {
             emit submitted();
             m_state = State::CLOSING;
             sendQuit();
@@ -231,7 +229,6 @@ void SMTPClient::sendAuth(bool ready)
 
 void SMTPClient::sendMailFrom()
 {
-    // quick hack
     QByteArray array = QByteArray("MAIL FROM:").append(m_from).append("\r\n");
     m_socket->write(array);
     qDebug() << "C: " << array;
