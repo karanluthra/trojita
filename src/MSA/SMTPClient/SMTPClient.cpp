@@ -5,6 +5,7 @@
 #include <QString>
 #include <QSslSocket>
 #include "Streams/IODeviceSocket.h"
+#include "Streams/SocketFactory.h"
 
 namespace MSA {
 
@@ -17,6 +18,7 @@ SMTPClient::SMTPClient(QObject *parent) :
 void SMTPClient::connectToHostEncrypted(QString &host, quint16 port)
 {
     m_factory.reset(new Streams::SslSocketFactory(host, port));
+    m_factory->setProxySettings(Streams::ProxySettings::DirectConnect, QLatin1String("smtp"));
     m_socket = m_factory->create();
 
     m_state = State::CONNECTING;
@@ -27,6 +29,7 @@ void SMTPClient::connectToHostEncrypted(QString &host, quint16 port)
 void SMTPClient::connectToHost(QString &host, quint16 port)
 {
     m_factory.reset(new Streams::TlsAbleSocketFactory(host, port));
+    m_factory->setProxySettings(Streams::ProxySettings::DirectConnect, QLatin1String("smtp"));
     m_socket = m_factory->create();
 
     m_state = State::CONNECTING;
