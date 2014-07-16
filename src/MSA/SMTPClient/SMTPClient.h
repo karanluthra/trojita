@@ -3,6 +3,7 @@
 
 #include <QObject>
 #include <QString>
+#include <Streams/SocketFactory.h>
 
 namespace Streams {
 class SslTlsSocket;
@@ -87,10 +88,11 @@ private:
     QByteArray m_from;
     QList<QByteArray> m_to;
     QByteArray m_data;
-    Streams::SslTlsSocket *m_socket;
+    Streams::Socket *m_socket;
     MSA::State m_state;
     QByteArray line;
     Response m_response;
+    std::unique_ptr<Streams::SocketFactory> m_factory;
 
     Options m_options;
     AuthModes m_authModes;

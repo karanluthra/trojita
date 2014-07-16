@@ -16,8 +16,9 @@ SMTPClient::SMTPClient(QObject *parent) :
 /** @short Connect using a SSL connection */
 void SMTPClient::connectToHostEncrypted(QString &host, quint16 port)
 {
-    QSslSocket *sslSock = new QSslSocket();
-    m_socket = new Streams::SslTlsSocket(sslSock, host, port, true);
+    m_factory.reset(new Streams::SslSocketFactory(host, port));
+    m_socket = m_factory->create();
+
     m_state = State::CONNECTING;
     connect(m_socket, SIGNAL(readyRead()), this, SLOT(slotReadyRead()));
 }
@@ -25,8 +26,9 @@ void SMTPClient::connectToHostEncrypted(QString &host, quint16 port)
 /** @short Connect using a plain connection (updradable by STARTTLS) */
 void SMTPClient::connectToHost(QString &host, quint16 port)
 {
-    QSslSocket *sslSock = new QSslSocket();
-    m_socket = new Streams::SslTlsSocket(sslSock, host, port);
+    m_factory.reset(new Streams::TlsAbleSocketFactory(host, port));
+    m_socket = m_factory->create();
+
     m_state = State::CONNECTING;
     connect(m_socket, SIGNAL(readyRead()), this, SLOT(slotReadyRead()));
 }
