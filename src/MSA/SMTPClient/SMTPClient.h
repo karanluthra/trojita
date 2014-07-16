@@ -41,24 +41,20 @@ class SMTPClient : public QObject
     Q_OBJECT
 public:
     explicit SMTPClient(QObject *parent);
-    // TODO: Convert these enums to C++11 style enum classes
-    enum Option {
-        NoOptions,
-        StartTlsOption,
-        SizeOption,
-        PipeliningOption,
-        EightBitMimeOption,
-        DSNOption,
-        AuthOption,
-        EnhancedStatusCodesOption,
+    enum Extension {
+        StartTls,
+        Size,
+        Pipelining,
+        EightBitMime,
+        DSN,
+        Auth,
+        EnhancedStatusCodes,
     };
-    // TODO: Convert these enums to C++11 style enum classes
     enum AuthMode {
-        AuthNone,
-        AuthPlain,
-        AuthLogin,
+        Plain,
+        Login,
     };
-    Q_DECLARE_FLAGS (Options, Option)
+    Q_DECLARE_FLAGS (Extensions, Extension)
     Q_DECLARE_FLAGS (AuthModes, AuthMode)
 
     void connectToHostEncrypted(QString &host, quint16 port);
@@ -94,11 +90,11 @@ private:
     Response m_response;
     std::unique_ptr<Streams::SocketFactory> m_factory;
 
-    Options m_options;
+    Extensions m_extensions;
     AuthModes m_authModes;
 };
 
-Q_DECLARE_OPERATORS_FOR_FLAGS(SMTPClient::Options)
+Q_DECLARE_OPERATORS_FOR_FLAGS(SMTPClient::Extensions)
 Q_DECLARE_OPERATORS_FOR_FLAGS(SMTPClient::AuthModes)
 
 }

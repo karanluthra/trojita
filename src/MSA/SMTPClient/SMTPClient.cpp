@@ -180,26 +180,26 @@ void SMTPClient::parseServerResponse(QByteArray &line)
 void SMTPClient::parseCapabilities(QString &response)
 {
     if (response.toLower() == QLatin1String("pipelining"))
-        m_options |= Option::PipeliningOption;
+        m_extensions |= Extension::Pipelining;
     else if (response.toLower() == QLatin1String("enhancedstatuscodes"))
-        m_options |= Option::EnhancedStatusCodesOption;
+        m_extensions |= Extension::EnhancedStatusCodes;
     else if (response.toLower() == QLatin1String("dsn"))
-        m_options |= Option::DSNOption;
+        m_extensions |= Extension::DSN;
     else if (response.toLower() == QLatin1String("starttls"))
-        m_options |= Option::StartTlsOption;
+        m_extensions |= Extension::StartTls;
     else if (response.toLower() == QLatin1String("8bitmime"))
-        m_options |= Option::EightBitMimeOption;
+        m_extensions |= Extension::EightBitMime;
     else if (response.startsWith(QLatin1String("size"))) {
-        m_options |= Option::SizeOption;
+        m_extensions |= Extension::Size;
         // parse size value
     } else if (response.toLower().startsWith(QLatin1String("auth "))) {
-        m_options |= Option::AuthOption;
+        m_extensions |= Extension::Auth;
         QStringList authModes = response.mid(5).split(QLatin1String(" "));
         foreach (const QString &authMode, authModes){
             if (authMode.toLower() == QLatin1String("plain"))
-                m_authModes |= AuthMode::AuthPlain;
+                m_authModes |= AuthMode::Plain;
             if (authMode.toLower() == QLatin1String("login"))
-                m_authModes |= AuthMode::AuthLogin;
+                m_authModes |= AuthMode::Login;
         }
     }
 }
