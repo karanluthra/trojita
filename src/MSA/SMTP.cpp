@@ -31,7 +31,16 @@ SMTP::SMTP(QObject *parent, const QString &host, quint16 port, bool encryptedCon
     encryptedConnect(encryptedConnect), startTls(startTls), auth(auth),
     user(user), failed(false), isWaitingForPassword(false), sendingMode(MODE_SMTP_INVALID)
 {
-    client =  new SMTPClient(this);
+    std::unique_ptr<Streams::SocketFactory> socketFactory;
+    if (encryptedConnect)
+        socketFactory.reset(new Streams::SslSocketFactory(host, port));
+    else
+        socketFactory.reset(new Streams::TlsAbleSocketFactory(host, port));
+
+    // TODO: Add ability to specify proxy settings in the settings menu
+    socketFactory->setProxySettings(Streams::ProxySettings::DirectConnect, QLatin1String("smtp"));
+
+    client =  new SMTPClient(this, std::move(socketFactory));
     connect(client, SIGNAL(submitted()), this, SIGNAL(sent()));
 }
 
@@ -98,10 +107,7 @@ void SMTP::sendContinueGotPassword()
     }
 
     // Start the connection now
-    if (encryptedConnect) {
-        client->connectToHostEncrypted(host, port);
-    } else
-        client->connectToHost(host, port);
+    client->doConnect();
 
     if (startTls)
         // TODO: add startTLS()

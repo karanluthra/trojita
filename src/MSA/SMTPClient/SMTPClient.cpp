@@ -9,27 +9,14 @@
 
 namespace MSA {
 
-SMTPClient::SMTPClient(QObject *parent) :
-    QObject(parent), m_state(MSA::State::DISCONNECTED)
+SMTPClient::SMTPClient(QObject *parent, std::unique_ptr<Streams::SocketFactory> factory) :
+    QObject(parent), m_state(MSA::State::DISCONNECTED), m_factory(std::move(factory))
 {
 }
 
-/** @short Connect using a SSL connection */
-void SMTPClient::connectToHostEncrypted(QString &host, quint16 port)
+/** @short Fire up the connection */
+void SMTPClient::doConnect()
 {
-    m_factory.reset(new Streams::SslSocketFactory(host, port));
-    m_factory->setProxySettings(Streams::ProxySettings::DirectConnect, QLatin1String("smtp"));
-    m_socket = m_factory->create();
-
-    m_state = State::CONNECTING;
-    connect(m_socket, SIGNAL(readyRead()), this, SLOT(slotReadyRead()));
-}
-
-/** @short Connect using a plain connection (updradable by STARTTLS) */
-void SMTPClient::connectToHost(QString &host, quint16 port)
-{
-    m_factory.reset(new Streams::TlsAbleSocketFactory(host, port));
-    m_factory->setProxySettings(Streams::ProxySettings::DirectConnect, QLatin1String("smtp"));
     m_socket = m_factory->create();
 
     m_state = State::CONNECTING;

@@ -40,7 +40,7 @@ class SMTPClient : public QObject
 {
     Q_OBJECT
 public:
-    explicit SMTPClient(QObject *parent);
+    explicit SMTPClient(QObject *parent, std::unique_ptr<Streams::SocketFactory> factory);
     enum Extension {
         StartTls,
         Size,
@@ -57,8 +57,7 @@ public:
     Q_DECLARE_FLAGS (Extensions, Extension)
     Q_DECLARE_FLAGS (AuthModes, AuthMode)
 
-    void connectToHostEncrypted(QString &host, quint16 port);
-    void connectToHost(QString &host, quint16 port);
+    void doConnect();
     void closeConnection();
     void setAuthParams(QString &user, QString &password);
     void setMailParams(QByteArray &from, QList<QByteArray> &to, QByteArray &data);
