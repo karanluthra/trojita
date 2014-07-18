@@ -27,6 +27,7 @@ void SMTPClient::closeConnection()
 {
     m_socket->close();
     qDebug() << "connection being closed";
+    m_socket->deleteLater();
     m_state = State::DISCONNECTED;
 }
 
