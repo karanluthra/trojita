@@ -1,6 +1,7 @@
 #include "SMTPClient.h"
 #include <QDateTime>
 #include <QDebug>
+#include <QLinkedList>
 #include <QRegExp>
 #include <QString>
 #include <QSslSocket>
@@ -10,7 +11,7 @@
 namespace MSA {
 
 SMTPClient::SMTPClient(QObject *parent, std::unique_ptr<Streams::SocketFactory> factory) :
-    QObject(parent), m_state(MSA::State::DISCONNECTED), m_factory(std::move(factory))
+    QObject(parent), m_commandTag(0), m_state(MSA::State::DISCONNECTED), m_factory(std::move(factory))
 {
 }
 
@@ -58,11 +59,13 @@ void SMTPClient::slotReadyRead()
     while (m_socket->canReadLine()) {
         QByteArray line = m_socket->readLine();
         qDebug() << "S: " << line;
-        parseServerResponse(line);
+        //parseServerResponse(line);
+        Response response = parseLine(line);
+        handleResponse(response);
     }
 }
 
-Response SMTPClient::lowLevelParser(QByteArray &line)
+Response SMTPClient::parseLine(QByteArray &line)
 {
     // TODO: Add tests for this parser in the unit test suite
 
@@ -100,7 +103,7 @@ Response SMTPClient::lowLevelParser(QByteArray &line)
     return response;
 }
 
-void SMTPClient::parseServerResponse(QByteArray &line)
+/*void SMTPClient::parseServerResponse(QByteArray &line)
 {
     m_response = lowLevelParser(line);
 
@@ -164,6 +167,67 @@ void SMTPClient::parseServerResponse(QByteArray &line)
     case State::DISCONNECTED:
         break;
     }
+}*/
+
+void SMTPClient::handleResponse(Response &response)
+{
+    /*
+     * TODO: Separate connection states from command states.
+     * switch(m_connection state) {}
+     * case CONNECTED:
+     * nextState(Response, CommandState)
+     */
+
+    if (m_state == State::CONNECTING && response.status == 220) {
+        QByteArray localname = QByteArray("localhost");
+        ehlo(localname);
+        executeCommands();
+    }
+}
+
+void SMTPClient::executeCommands()
+{
+    Q_ASSERT(!cmdQueue.isEmpty());
+    Commands::Command &cmd = cmdQueue.first();
+
+    QByteArray buf;
+
+    while (1) {
+        Commands::PartOfCommand part = cmd.cmds[ cmd.currentPart ];
+        if (part.kind == Commands::TokenType::ATOM) {
+            buf.append(part.text);
+        }
+
+        if (cmd.currentPart == cmd.cmds.size() - 1) {
+            // last part
+            buf.append("\r\n");
+            qDebug() << buf;
+            m_socket->write(buf);
+            cmdQueue.pop_front();
+            return;
+        } else {
+            buf.append(' ');
+            cmd.currentPart++;
+        }
+    }
+}
+
+CommandHandle SMTPClient::ehlo(QByteArray &localname)
+{
+    return queueCommand(Commands::Command("EHLO") << localname);
+}
+
+int SMTPClient::generateTag()
+{
+    return ++m_commandTag;
+}
+
+CommandHandle SMTPClient::queueCommand(Commands::Command &command)
+{
+    int tag = generateTag();
+    command.addTag(tag);
+    cmdQueue.append(command);
+    return tag;
 }
 
 // TODO: error handling, logic improvement

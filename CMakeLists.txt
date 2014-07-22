@@ -311,6 +311,7 @@ set(libMSA_SOURCES
     ${path_MSA}/ImapSubmit.cpp
     ${path_MSA}/SMTP.cpp
     ${path_MSA}/SMTPClient/SMTPClient.cpp
+    ${path_MSA}/SMTPClient/Command.cpp
     ${path_MSA}/Sendmail.cpp
 )
 

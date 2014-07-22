@@ -3,7 +3,9 @@
 
 #include <QObject>
 #include <QString>
+#include <QLinkedList>
 #include <Streams/SocketFactory.h>
+#include <MSA/SMTPClient/Command.h>
 
 namespace Streams {
 class SslTlsSocket;
@@ -36,6 +38,8 @@ struct Response
     bool isMultiline;
 };
 
+typedef int CommandHandle;
+
 class SMTPClient : public QObject
 {
     Q_OBJECT
@@ -65,9 +69,10 @@ signals:
     void submitted();
 private slots:
     void slotReadyRead();
-    void parseServerResponse(QByteArray &line);
+    void handleResponse(Response &response);
+    //void parseServerResponse(QByteArray &line);
     void parseCapabilities(QString &response);
-    Response lowLevelParser(QByteArray &line);
+    Response parseLine(QByteArray &line);
 private:
     void sendEhlo();
     void sendAuth(bool ready);
@@ -76,6 +81,16 @@ private:
     void sendData(bool ready);
     void sendQuit();
 
+    // @karan: commands go here for now
+    CommandHandle ehlo(QByteArray &localname);
+
+    int generateTag();
+    CommandHandle queueCommand(Commands::Command &command);
+    void executeCommands();
+
+    /** @short Queue storing commands that are about to be executed */
+    QLinkedList<Commands::Command> cmdQueue;
+    int m_commandTag;
     QString m_host;
     quint16 m_port;
     QString m_user;
