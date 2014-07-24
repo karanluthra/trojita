@@ -11,7 +11,7 @@
 namespace MSA {
 
 SMTPClient::SMTPClient(QObject *parent, std::unique_ptr<Streams::SocketFactory> factory) :
-    QObject(parent), m_commandTag(0), m_state(MSA::State::DISCONNECTED), m_factory(std::move(factory))
+    QObject(parent), m_commandTag(0), m_state(State::DISCONNECTED), m_command(Command::INIT), m_factory(std::move(factory))
 {
 }
 
@@ -103,85 +103,153 @@ Response SMTPClient::parseLine(QByteArray &line)
     return response;
 }
 
-/*void SMTPClient::parseServerResponse(QByteArray &line)
-{
-    m_response = lowLevelParser(line);
-
-    switch (m_state) {
-    case State::CONNECTING:
-        if (m_response.status == 220) {
-            m_state = State::CONNECTED;
-            sendEhlo();
-            m_state = State::HANDSHAKE;
-        }
-        break;
-    case State::HANDSHAKE:
-        parseCapabilities(m_response.text);
-        if (!m_response.isMultiline) {
-            m_state = State::AUTH;
-            sendAuth(false);
-        }
-        break;
-    case State::AUTH:
-        if (m_response.status == 334)
-            sendAuth(true);
-        if (m_response.status == 235) {
-            m_state = State::MAIL;
-            sendMailFrom();
-        }
-        break;
-    case State::MAIL:
-        if (m_response.status == 250) {
-            m_state = State::RCPT;
-            if (!m_to.isEmpty()) {
-                sendRcpt(m_to.front());
-            }
-        }
-        break;
-    case State::RCPT:
-        if (m_response.status == 250) {
-            m_to.removeFirst();
-            if (!m_to.isEmpty()) {
-                sendRcpt(m_to.front());
-            } else {
-                m_state = State::DATA;
-                sendData(false);
-            }
-        } else {
-            qDebug() << "Error: " << line;
-        }
-        break;
-    case State::DATA:
-        if (m_response.status == 354) {
-            sendData(true);
-        } else if (m_response.status == 250) {
-            emit submitted();
-            m_state = State::CLOSING;
-            sendQuit();
-        }
-        break;
-    case State::CLOSING:
-        closeConnection();
-        break;
-    case State::CONNECTED:
-    case State::DISCONNECTED:
-        break;
-    }
-}*/
-
 void SMTPClient::handleResponse(Response &response)
 {
-    /*
-     * TODO: Separate connection states from command states.
-     * switch(m_connection state) {}
-     * case CONNECTED:
-     * nextState(Response, CommandState)
-     */
+    if (m_state = State::CONNECTING) {
+        // TODO: make use of nextCommand() here
+    }
+}
 
-    if (m_state == State::CONNECTING && response.status == 220) {
-        QByteArray localname = QByteArray("localhost");
-        ehlo(localname);
-        executeCommands();
+/* Determine the next SMTP command the client needs to send in order
+ * to proceed with submitting a message for submission to the SMTP server.
+ * The next command is a function of two variables:
+ * 1. The previous command,
+ * 2. The response code (error/success/failure) */
+void SMTPClient::nextCommand(Response &response, Command &lastCommand)
+{
+    Command nextCommand;
+
+    switch (lastCommand) {
+    case Command::INIT:
+        switch (response.status) {
+        case 220:
+            nextCommand = Command::EHLO;
+            break;
+        case 554:
+            // TODO: error state
+            break;
+        default :
+            // TODO:
+        }
+        break;
+    case Command::EHLO:
+        switch (response.status) {
+        case 250:
+            // TODO: get the current line parsed for capability
+            if (!response.isMultiline) {
+                // TODO: if (requires auth && "AUTH" capability advertised)
+                if (true) {
+                    nextCommand = Command::AUTH;
+                }
+            }
+            break;
+        case 550:
+        case 502:
+            // EHLO not supported, do HELO instead
+            nextCommand = Command::HELO;
+            break;
+        default:
+            // TODO:
+        }
+        break;
+    case Command::HELO:
+        // TODO: look into HELO
+        break;
+    case Command::AUTH:
+        switch (response.status) {
+        case 334:
+            // Intermediate stage
+            break;
+        case 235:
+            // Auth Successful
+            nextCommand = Command::MAIL;
+            break;
+        case 454:
+        case 500:
+        case 534:
+        case 535:
+        case 538:
+            // TODO: error state
+            break;
+        default:
+            // TODO:
+        }
+        break;
+    case Command::MAIL:
+        switch (response.status) {
+        case 250:
+            nextCommand = Command::RCPT;
+            break;
+        case 552:
+        case 451:
+        case 452:
+        case 550:
+        case 553:
+        case 503:
+        case 455:
+        case 555:
+            // TODO: error states
+            break;
+        default:
+            // TODO:
+        }
+        break;
+    case Command::RCPT:
+        switch (response.status) {
+        case 250:
+        case 251:
+            if (m_to.isEmpty()) {
+                nextCommand = Command::DATA;
+            }
+            break;
+        case 550:
+        case 551:
+        case 552:
+        case 553:
+        case 450:
+        case 451:
+        case 452:
+        case 503:
+        case 455:
+        case 555:
+            // TODO: error states
+            break;
+        default:
+            // TODO:
+        }
+        break;
+    case Command::DATA:
+        switch (response.status) {
+        case 250:
+            nextCommand = Command::QUIT;
+            break;
+        case 354:
+            // proceed stage 2
+            break;
+        case 552:
+        case 554:
+        case 451:
+        case 452:
+        case 450:
+        case 550:
+        case 503:
+        case 554:
+            // TODO: error state
+            break;
+        default:
+            // TODO:
+        }
+        break;
+    case Command::QUIT:
+        switch (response.status) {
+        case 220:
+            break;
+        default:
+            // TODO:
+        }
+        break;
+    default:
+        // TODO:
     }
 }
 
@@ -230,8 +298,6 @@ CommandHandle SMTPClient::queueCommand(Commands::Command &command)
     return tag;
 }
 
-// TODO: error handling, logic improvement
-
 void SMTPClient::parseCapabilities(QString &response)
 {
     if (response.toLower() == QLatin1String("pipelining"))
@@ -258,6 +324,8 @@ void SMTPClient::parseCapabilities(QString &response)
         }
     }
 }
+
+/* Not needed any more, except for reference
 
 void SMTPClient::sendEhlo()
 {
@@ -317,5 +385,7 @@ void SMTPClient::sendQuit()
     m_socket->write(array);
     qDebug() << "C: " << array;
 }
+
+*/
 
 }

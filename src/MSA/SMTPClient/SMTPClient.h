@@ -25,6 +25,17 @@ enum class State {
     CLOSING,
 };
 
+enum class Command {
+    INIT,
+    HELO,
+    EHLO,
+    AUTH,
+    MAIL,
+    RCPT,
+    DATA,
+    QUIT,
+};
+
 struct Response
 {
     int status;
@@ -81,6 +92,8 @@ private:
     void sendData(bool ready);
     void sendQuit();
 
+    void nextCommand(Response &response, Command &lastCommand);
+
     // @karan: commands go here for now
     CommandHandle ehlo(QByteArray &localname);
 
@@ -99,7 +112,8 @@ private:
     QList<QByteArray> m_to;
     QByteArray m_data;
     Streams::Socket *m_socket;
-    MSA::State m_state;
+    State m_state;
+    Command m_command;
     QByteArray line;
     Response m_response;
     std::unique_ptr<Streams::SocketFactory> m_factory;
