@@ -46,15 +46,14 @@ SMTP::SMTP(QObject *parent, const QString &host, quint16 port, bool encryptedCon
 
 void SMTP::cancel()
 {
-    //qwwSmtp->disconnectFromHost();
-    if (!failed) {
-        failed = true;
-        emit error(tr("Sending of the message was cancelled"));
-    }
+    // TODO:
+    Q_ASSERT(false);
 }
 
 void SMTP::handleError(QAbstractSocket::SocketError err, const QString &msg)
 {
+    // TODO:
+    Q_ASSERT(false);
     Q_UNUSED(err);
     failed = true;
     emit error(msg);
@@ -109,12 +108,15 @@ void SMTP::sendContinueGotPassword()
     // Start the connection now
     client->doConnect();
 
-    if (startTls)
-        // TODO: add startTLS()
-        qt_noop();
+    if (startTls) {
+        // TODO: add startTls()
+        Q_ASSERT(false);
+    }
 
-    // @karan: why?
-    //qwwSmtp->disconnectFromHost();
+    // Enter the client state-machine
+    // TODO: client->exec();
+
+    client->closeConnection();
 }
 
 bool SMTP::supportsBurl() const

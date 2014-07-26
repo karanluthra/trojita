@@ -22,12 +22,12 @@ void SMTPClient::doConnect()
 
     m_state = State::CONNECTING;
     connect(m_socket, SIGNAL(readyRead()), this, SLOT(slotReadyRead()));
+    // TODO: handle other (useful) signals emitted by the socket
 }
 
 void SMTPClient::closeConnection()
 {
     m_socket->close();
-    qDebug() << "connection being closed";
     m_socket->deleteLater();
     m_state = State::DISCONNECTED;
 }
@@ -124,7 +124,9 @@ void SMTPClient::nextCommand(Response &response, Command &lastCommand)
     case Command::INIT:
         switch (response.status) {
         case 220: {
+            m_state = State::READY;
             nextCommand = Command::EHLO;
+
             // lets inject commands here for testing
             QByteArray localname = QByteArray("localhost");
             ehlo(localname);

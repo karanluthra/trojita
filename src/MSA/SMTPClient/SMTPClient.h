@@ -16,13 +16,8 @@ namespace MSA {
 enum class State {
     DISCONNECTED,
     CONNECTING,
-    CONNECTED,
-    HANDSHAKE,
-    AUTH,
-    MAIL,
-    RCPT,
-    DATA,
-    CLOSING,
+    READY,
+    PIPELINING,
 };
 
 enum class Command {
@@ -76,21 +71,17 @@ public:
     void closeConnection();
     void setAuthParams(QString &user, QString &password);
     void setMailParams(QByteArray &from, QList<QByteArray> &to, QByteArray &data);
+
 signals:
     void submitted();
+
 private slots:
     void slotReadyRead();
     void handleResponse(Response &response);
     void parseCapabilities(QString &response);
     Response parseLine(QByteArray &line);
-private:
-    void sendEhlo();
-    void sendAuth(bool ready);
-    void sendMailFrom();
-    void sendRcpt(QByteArray &recipient);
-    void sendData(bool ready);
-    void sendQuit();
 
+private:
     void nextCommand(Response &response, Command &lastCommand);
 
     // @karan: commands go here for now
