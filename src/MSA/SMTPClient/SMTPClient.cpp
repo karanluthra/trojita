@@ -58,8 +58,7 @@ void SMTPClient::slotReadyRead()
 {
     while (m_socket->canReadLine()) {
         QByteArray line = m_socket->readLine();
-        qDebug() << "S: " << line;
-        //parseServerResponse(line);
+        qDebug() << "S: " << line.trimmed();
         Response response = parseLine(line);
         handleResponse(response);
     }
@@ -105,8 +104,10 @@ Response SMTPClient::parseLine(QByteArray &line)
 
 void SMTPClient::handleResponse(Response &response)
 {
-    if (m_state = State::CONNECTING) {
-        // TODO: make use of nextCommand() here
+    if (m_state == State::CONNECTING) {
+        nextCommand(response, m_command);
+    } else {
+        Q_ASSERT(false);
     }
 }
 
@@ -117,29 +118,38 @@ void SMTPClient::handleResponse(Response &response)
  * 2. The response code (error/success/failure) */
 void SMTPClient::nextCommand(Response &response, Command &lastCommand)
 {
-    Command nextCommand;
+    Command nextCommand = lastCommand;
 
     switch (lastCommand) {
     case Command::INIT:
         switch (response.status) {
-        case 220:
+        case 220: {
             nextCommand = Command::EHLO;
+            // lets inject commands here for testing
+            QByteArray localname = QByteArray("localhost");
+            ehlo(localname);
             break;
+        }
         case 554:
             // TODO: error state
+            Q_ASSERT(false);
             break;
-        default :
+        default:
             // TODO:
+            Q_ASSERT(false);
         }
         break;
     case Command::EHLO:
         switch (response.status) {
         case 250:
-            // TODO: get the current line parsed for capability
+            parseCapabilities(response.text);
             if (!response.isMultiline) {
                 // TODO: if (requires auth && "AUTH" capability advertised)
-                if (true) {
+                if (m_extensions.testFlag(Extension::Auth)) {
                     nextCommand = Command::AUTH;
+                    if (m_authModes.testFlag(AuthMode::Plain)) {
+                        auth(QByteArray("PLAIN"));
+                    }
                 }
             }
             break;
@@ -150,18 +160,23 @@ void SMTPClient::nextCommand(Response &response, Command &lastCommand)
             break;
         default:
             // TODO:
+            Q_ASSERT(false);
         }
         break;
     case Command::HELO:
         // TODO: look into HELO
+        Q_ASSERT(false);
         break;
     case Command::AUTH:
         switch (response.status) {
         case 334:
-            // Intermediate stage
+            authPlainStageTwo();
+            executeCommands();
             break;
         case 235:
             // Auth Successful
+            qDebug() << "Auth Success";
+            Q_ASSERT(false);
             nextCommand = Command::MAIL;
             break;
         case 454:
@@ -170,8 +185,10 @@ void SMTPClient::nextCommand(Response &response, Command &lastCommand)
         case 535:
         case 538:
             // TODO: error state
+            Q_ASSERT(false);
             break;
         default:
+            Q_ASSERT(false);
             // TODO:
         }
         break;
@@ -188,9 +205,11 @@ void SMTPClient::nextCommand(Response &response, Command &lastCommand)
         case 503:
         case 455:
         case 555:
+            Q_ASSERT(false);
             // TODO: error states
             break;
         default:
+            Q_ASSERT(false);
             // TODO:
         }
         break;
@@ -213,9 +232,11 @@ void SMTPClient::nextCommand(Response &response, Command &lastCommand)
         case 455:
         case 555:
             // TODO: error states
+            Q_ASSERT(false);
             break;
         default:
             // TODO:
+            Q_ASSERT(false);
         }
         break;
     case Command::DATA:
@@ -225,9 +246,9 @@ void SMTPClient::nextCommand(Response &response, Command &lastCommand)
             break;
         case 354:
             // proceed stage 2
+            Q_ASSERT(false);
             break;
         case 552:
-        case 554:
         case 451:
         case 452:
         case 450:
@@ -235,9 +256,11 @@ void SMTPClient::nextCommand(Response &response, Command &lastCommand)
         case 503:
         case 554:
             // TODO: error state
+            Q_ASSERT(false);
             break;
         default:
             // TODO:
+            Q_ASSERT(false);
         }
         break;
     case Command::QUIT:
@@ -246,10 +269,16 @@ void SMTPClient::nextCommand(Response &response, Command &lastCommand)
             break;
         default:
             // TODO:
+            Q_ASSERT(false);
         }
         break;
     default:
         // TODO:
+        Q_ASSERT(false);
+    }
+    if (nextCommand != lastCommand) {
+        m_command = nextCommand;
+        executeCommands();
     }
 }
 
@@ -269,7 +298,7 @@ void SMTPClient::executeCommands()
         if (cmd.currentPart == cmd.cmds.size() - 1) {
             // last part
             buf.append("\r\n");
-            qDebug() << buf;
+            qDebug() << "C: " << buf.trimmed();
             m_socket->write(buf);
             cmdQueue.pop_front();
             return;
@@ -283,6 +312,22 @@ void SMTPClient::executeCommands()
 CommandHandle SMTPClient::ehlo(QByteArray &localname)
 {
     return queueCommand(Commands::Command("EHLO") << localname);
+}
+
+CommandHandle SMTPClient::auth(QByteArray method)
+{
+    return queueCommand(Commands::Command("AUTH") << method);
+}
+
+CommandHandle SMTPClient::authPlainStageTwo()
+{
+    QByteArray ba;
+    ba.append('\0');
+    ba.append(m_user.toUtf8());
+    ba.append('\0');
+    ba.append(m_password.toUtf8());
+    QByteArray encoded = ba.toBase64();
+    return queueCommand(Commands::Command() << encoded);
 }
 
 int SMTPClient::generateTag()
@@ -316,7 +361,7 @@ void SMTPClient::parseCapabilities(QString &response)
     } else if (response.toLower().startsWith(QLatin1String("auth "))) {
         m_extensions |= Extension::Auth;
         QStringList authModes = response.mid(5).split(QLatin1String(" "));
-        foreach (const QString &authMode, authModes){
+        foreach (const QString &authMode, authModes) {
             if (authMode.toLower() == QLatin1String("plain"))
                 m_authModes |= AuthMode::Plain;
             if (authMode.toLower() == QLatin1String("login"))

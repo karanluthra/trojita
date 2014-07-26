@@ -57,17 +57,17 @@ class SMTPClient : public QObject
 public:
     explicit SMTPClient(QObject *parent, std::unique_ptr<Streams::SocketFactory> factory);
     enum Extension {
-        StartTls,
-        Size,
-        Pipelining,
-        EightBitMime,
-        DSN,
-        Auth,
-        EnhancedStatusCodes,
+        StartTls = 1 << 1,
+        Size = 1 << 2,
+        Pipelining = 1 << 3,
+        EightBitMime = 1 << 4,
+        DSN = 1 << 5,
+        Auth = 1 << 6,
+        EnhancedStatusCodes = 1 << 7,
     };
     enum AuthMode {
-        Plain,
-        Login,
+        Plain = 1 << 1,
+        Login = 1 << 2,
     };
     Q_DECLARE_FLAGS (Extensions, Extension)
     Q_DECLARE_FLAGS (AuthModes, AuthMode)
@@ -81,7 +81,6 @@ signals:
 private slots:
     void slotReadyRead();
     void handleResponse(Response &response);
-    //void parseServerResponse(QByteArray &line);
     void parseCapabilities(QString &response);
     Response parseLine(QByteArray &line);
 private:
@@ -96,6 +95,8 @@ private:
 
     // @karan: commands go here for now
     CommandHandle ehlo(QByteArray &localname);
+    CommandHandle auth(QByteArray method);
+    CommandHandle authPlainStageTwo();
 
     int generateTag();
     CommandHandle queueCommand(Commands::Command &command);
