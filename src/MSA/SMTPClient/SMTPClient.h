@@ -71,7 +71,7 @@ public:
     void closeConnection();
     void setAuthParams(QString &user, QString &password);
     void setMailParams(QByteArray &from, QList<QByteArray> &to, QByteArray &data);
-
+    void exec();
 signals:
     void submitted();
 
@@ -80,6 +80,8 @@ private slots:
     void handleResponse(Response &response);
     void parseCapabilities(QString &response);
     Response parseLine(QByteArray &line);
+    void generateFakeResponse();
+    void checkMatchFakeResponse(Response &actualResponse);
 
 private:
     void nextCommand(Response &response, Command &lastCommand);
@@ -95,6 +97,8 @@ private:
 
     /** @short Queue storing commands that are about to be executed */
     QLinkedList<Commands::Command> cmdQueue;
+    QLinkedList<Response> responseQueue;
+    QLinkedList<Response> pendingFakeResponseQueue;
     int m_commandTag;
     QString m_host;
     quint16 m_port;

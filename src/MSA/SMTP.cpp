@@ -113,8 +113,8 @@ void SMTP::sendContinueGotPassword()
         Q_ASSERT(false);
     }
 
-    // Enter the client state-machine
-    // TODO: client->exec();
+    // Enter the client state-machine. No, this doesn't start another event loop that would block GUI, etc.
+    client->exec();
 
     client->closeConnection();
 }

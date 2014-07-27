@@ -104,10 +104,48 @@ Response SMTPClient::parseLine(QByteArray &line)
 
 void SMTPClient::handleResponse(Response &response)
 {
-    if (m_state == State::CONNECTING) {
-        nextCommand(response, m_command);
-    } else {
-        Q_ASSERT(false);
+    if (m_state == State::PIPELINING) {
+        checkMatchFakeResponse(response);
+    } else if (m_state == State::READY) {
+        responseQueue.append(response);
+    }
+    exec();
+}
+
+void SMTPClient::generateFakeResponse()
+{
+    Response fakeResponse;
+    switch (m_command) {
+        // TODO
+    }
+    responseQueue.append(fakeResponse);
+    pendingFakeResponseQueue.append(fakeResponse);
+    exec();
+}
+
+void SMTPClient::checkMatchFakeResponse(Response &actualResponse)
+{
+    Response fakeResponse = pendingFakeResponseQueue.front();
+    Q_ASSERT(fakeResponse.status = actualResponse.status);
+    pendingFakeResponseQueue.pop_front();
+}
+
+void SMTPClient::exec()
+{
+    switch (m_state) {
+    case State::CONNECTING:
+    case State::READY:
+        nextCommand(responseQueue.front(), m_command);
+        responseQueue.pop_front();
+        break;
+    case State::PIPELINING:
+        nextCommand(responseQueue.front(), m_command);
+        responseQueue.pop_front();
+        generateFakeResponse();
+        break;
+    case State::DISCONNECTED:
+        // TODO:
+        qt_noop();
     }
 }
 
