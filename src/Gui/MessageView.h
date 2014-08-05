@@ -73,6 +73,7 @@ public:
     void setNetworkWatcher(Imap::Mailbox::NetworkWatcher *netWatcher);
     void reply(MainWindow *mainWindow, Composer::ReplyMode mode);
     QModelIndex currentMessage() const;
+    void redirect(MainWindow *mainWindow);
 public slots:
     void setMessage(const QModelIndex &index);
     void setEmpty();

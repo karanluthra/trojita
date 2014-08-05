@@ -334,6 +334,15 @@ void MessageView::setNetworkWatcher(Imap::Mailbox::NetworkWatcher *netWatcher)
     factory->setNetworkWatcher(netWatcher);
 }
 
+void MessageView::redirect(MainWindow *mainWindow)
+{
+    if (!message.isValid())
+        return;
+
+    ComposeWidget::warnIfMsaNotConfigured(
+                ComposeWidget::createRedirect(mainWindow, QModelIndex()), mainWindow);
+}
+
 void MessageView::reply(MainWindow *mainWindow, Composer::ReplyMode mode)
 {
     if (!message.isValid())

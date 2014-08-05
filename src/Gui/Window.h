@@ -127,6 +127,7 @@ private slots:
     void slotShowSettings();
     void slotShowImapInfo();
     void slotExpunge();
+    void slotRedirect();
     void imapError(const QString &message);
     void networkError(const QString &message);
     void cacheError(const QString &message);
@@ -282,6 +283,7 @@ private:
     QAction *m_replyList;
     QAction *m_replyGuess;
     QAction *expunge;
+    QAction *redirect;
     QAction *createChildMailbox;
     QAction *createTopMailbox;
     QAction *deleteCurrentMailbox;

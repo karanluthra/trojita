@@ -72,6 +72,7 @@ public:
     static ComposeWidget *createDraft(MainWindow *mainWindow, const QString &path);
     static ComposeWidget *createBlank(MainWindow *mainWindow);
     static ComposeWidget *createFromUrl(MainWindow *mainWindow, const QUrl &url);
+    static ComposeWidget *createRedirect(MainWindow *mainWindow, const QModelIndex &redirectingMessage);
     static ComposeWidget *createReply(MainWindow *mainWindow, const Composer::ReplyMode &mode, const QModelIndex &replyingToMessage,
                                       const QList<QPair<Composer::RecipientKind, QString> > &recipients, const QString &subject,
                                       const QString &body, const QList<QByteArray> &inReplyTo, const QList<QByteArray> &references);

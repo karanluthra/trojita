@@ -184,6 +184,7 @@ void MainWindow::defineActions()
     shortcutHandler->defineAction(QLatin1String("action_compose_draft"), QLatin1String("document-open-recent"), tr("&Edit Draft..."));
     shortcutHandler->defineAction(QLatin1String("action_show_menubar"), QLatin1String("view-list-text"), tr("Show Main Menu &Bar"), tr("Ctrl+M"));
     shortcutHandler->defineAction(QLatin1String("action_expunge"), QLatin1String("trash-empty"), tr("Exp&unge"), tr("Ctrl+E"));
+    shortcutHandler->defineAction(QLatin1String("action_redirect"), QLatin1String("arrow-right"), tr("Redirect Message"));
     shortcutHandler->defineAction(QLatin1String("action_mark_as_read"), QLatin1String("mail-mark-read"), tr("Mark as &Read"), QLatin1String("M"));
     shortcutHandler->defineAction(QLatin1String("action_go_to_next_unread"), QLatin1String("arrow-right"), tr("&Next Unread Message"), QLatin1String("N"));
     shortcutHandler->defineAction(QLatin1String("action_go_to_previous_unread"), QLatin1String("arrow-left"), tr("&Previous Unread Message"), QLatin1String("P"));
@@ -318,6 +319,7 @@ void MainWindow::createActions()
     m_editDraft = ShortcutHandler::instance()->createAction(QLatin1String("action_compose_draft"), this, SLOT(slotEditDraft()), this);
 
     expunge = ShortcutHandler::instance()->createAction(QLatin1String("action_expunge"), this, SLOT(slotExpunge()), this);
+    redirect = ShortcutHandler::instance()->createAction(QLatin1String("action_redirect"), this, SLOT(slotRedirect()), this);
 
     markAsRead = ShortcutHandler::instance()->createAction(QLatin1String("action_mark_as_read"), this);
     markAsRead->setCheckable(true);
@@ -488,6 +490,7 @@ void MainWindow::createActions()
     m_mainToolbar->addWidget(m_composeButton);
     m_mainToolbar->addWidget(m_replyButton);
     m_mainToolbar->addAction(expunge);
+    m_mainToolbar->addAction(redirect);
     m_mainToolbar->addSeparator();
     m_mainToolbar->addAction(markAsRead);
     m_mainToolbar->addAction(markAsDeleted);
@@ -1369,6 +1372,12 @@ void MainWindow::handleMarkAsFlagged(const bool value)
         imapModel()->setMessageFlags(translatedIndexes, Imap::Mailbox::FlagNames::flagged, value ? Imap::Mailbox::FLAG_ADD : Imap::Mailbox::FLAG_REMOVE);
     }
 }
+
+void MainWindow::slotRedirect()
+{
+    m_messageWidget->messageView->redirect(this);
+}
+
 void MainWindow::slotExpunge()
 {
     imapModel()->expungeMailbox(qobject_cast<Imap::Mailbox::MsgListModel *>(m_imapAccess->msgListModel())->currentMailbox());

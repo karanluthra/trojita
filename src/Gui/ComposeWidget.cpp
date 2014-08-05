@@ -329,6 +329,22 @@ ComposeWidget *ComposeWidget::createFromUrl(MainWindow *mainWindow, const QUrl &
     return w;
 }
 
+ComposeWidget *ComposeWidget::createRedirect(MainWindow *mainWindow, const QModelIndex &redirectingMessage)
+{
+    MSA::MSAFactory *msaFactory = mainWindow->msaFactory();
+    if (!msaFactory)
+        return 0;
+
+    Q_UNUSED(redirectingMessage);
+    ComposeWidget *w = new ComposeWidget(mainWindow, msaFactory);
+    w->ui->mailText->hide();
+    w->ui->groupBox->hide();
+    w->setWindowTitle(tr("Redirect Mail"));
+    Util::centerWidgetOnScreen(w);
+    w->show();
+    return w;
+}
+
 /** @short Create a composer window for a reply */
 ComposeWidget *ComposeWidget::createReply(MainWindow *mainWindow, const Composer::ReplyMode &mode, const QModelIndex &replyingToMessage,
                                           const QList<QPair<Composer::RecipientKind, QString> > &recipients, const QString &subject,
