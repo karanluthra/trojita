@@ -41,6 +41,7 @@ class MSAFactory;
 namespace Composer {
 
 class MessageComposer;
+class OutgoingMessage;
 
 /** @short Handle submission of an e-mail via multiple ways
 
@@ -51,10 +52,8 @@ class Submission : public QObject
 {
     Q_OBJECT
 public:
-    explicit Submission(QObject *parent, Imap::Mailbox::Model *model, MSA::MSAFactory *msaFactory);
+    explicit Submission(QObject *parent, Imap::Mailbox::Model *model, MSA::MSAFactory *msaFactory, OutgoingMessage *composer);
     virtual ~Submission();
-
-    MessageComposer *composer();
 
     void setImapOptions(const bool saveToSentFolder, const QString &sentFolderName,
                         const QString &hostname, const QString &username, const bool useImapSubmit);
@@ -133,7 +132,7 @@ private:
     QByteArray m_rawMessageData;
     int m_msaMaximalProgress;
 
-    MessageComposer *m_composer;
+    OutgoingMessage *m_composer;
     QPointer<Imap::Mailbox::Model> m_model;
     MSA::MSAFactory *m_msaFactory;
 

@@ -407,16 +407,6 @@ QStringList MessageComposer::mimeTypes() const
     return QStringList() << xTrojitaMessageList << xTrojitaImapPart << xTrojitaAttachmentList << QLatin1String("text/uri-list");
 }
 
-void MessageComposer::setFrom(const Imap::Message::MailAddress &from)
-{
-    m_from = from;
-}
-
-void MessageComposer::setRecipients(const QList<QPair<Composer::RecipientKind, Imap::Message::MailAddress> > &recipients)
-{
-    m_recipients = recipients;
-}
-
 /** @short Set the value for the In-Reply-To header as per RFC 5322, section 3.6.4
 
 The expected values to be passed here do *not* contain the angle brackets. This is in accordance with
@@ -434,11 +424,6 @@ void MessageComposer::setInReplyTo(const QList<QByteArray> &inReplyTo)
 void MessageComposer::setReferences(const QList<QByteArray> &references)
 {
     m_references = references;
-}
-
-void MessageComposer::setTimestamp(const QDateTime &timestamp)
-{
-    m_timestamp = timestamp;
 }
 
 void MessageComposer::setSubject(const QString &subject)
@@ -723,11 +708,6 @@ bool MessageComposer::asCatenateData(QList<Imap::Mailbox::CatenatePair> &target,
     return true;
 }
 
-QDateTime MessageComposer::timestamp() const
-{
-    return m_timestamp;
-}
-
 QList<QByteArray> MessageComposer::inReplyTo() const
 {
     return m_inReplyTo;
@@ -736,22 +716,6 @@ QList<QByteArray> MessageComposer::inReplyTo() const
 QList<QByteArray> MessageComposer::references() const
 {
     return m_references;
-}
-
-QByteArray MessageComposer::rawFromAddress() const
-{
-    return m_from.asSMTPMailbox();
-}
-
-QList<QByteArray> MessageComposer::rawRecipientAddresses() const
-{
-    QList<QByteArray> res;
-
-    for (auto it = m_recipients.begin(); it != m_recipients.end(); ++it) {
-        res << it->second.asSMTPMailbox();
-    }
-
-    return res;
 }
 
 bool MessageComposer::addFileAttachment(const QString &path)

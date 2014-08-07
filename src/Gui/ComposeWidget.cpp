@@ -97,13 +97,14 @@ ComposeWidget::ComposeWidget(MainWindow *mainWindow, MSA::MSAFactory *msaFactory
     setWindowIcon(winIcon);
 
     Q_ASSERT(m_mainWindow);
-    m_submission = new Composer::Submission(this, m_mainWindow->imapModel(), msaFactory);
+    m_composer = new Composer::MessageComposer(m_mainWindow->imapModel(), this);
+    m_submission = new Composer::Submission(this, m_mainWindow->imapModel(), msaFactory, m_composer);
     connect(m_submission, SIGNAL(succeeded()), this, SLOT(sent()));
     connect(m_submission, SIGNAL(failed(QString)), this, SLOT(gotError(QString)));
     connect(m_submission, SIGNAL(passwordRequested(QString,QString)), this, SLOT(passwordRequested(QString,QString)), Qt::QueuedConnection);
 
     ui->setupUi(this);
-    ui->attachmentsView->setComposer(m_submission->composer());
+    ui->attachmentsView->setComposer(m_composer);
     sendButton = ui->buttonBox->addButton(tr("Send"), QDialogButtonBox::AcceptRole);
     connect(sendButton, SIGNAL(clicked()), this, SLOT(send()));
     cancelButton = ui->buttonBox->addButton(QDialogButtonBox::Cancel);
@@ -381,7 +382,7 @@ ComposeWidget *ComposeWidget::createForward(MainWindow *mainWindow, const Compos
     w->m_messageEverEdited = false;
 
     // Prepare the message to be forwarded and add it to the attachments view
-    w->m_submission->composer()->prepareForwarding(forwardingMessage, mode);
+    w->m_composer->prepareForwarding(forwardingMessage, mode);
 
     Util::centerWidgetOnScreen(w);
     w->show();
@@ -547,7 +548,7 @@ bool ComposeWidget::buildMessageData()
         gotError(tr("You haven't entered any recipients"));
         return false;
     }
-    m_submission->composer()->setRecipients(recipients);
+    m_composer->setRecipients(recipients);
 
     Imap::Message::MailAddress fromAddress;
     if (!Imap::Message::MailAddress::fromPrettyString(fromAddress, ui->sender->currentText())) {
@@ -559,10 +560,10 @@ bool ComposeWidget::buildMessageData()
         ui->subject->setFocus();
         return false;
     }
-    m_submission->composer()->setFrom(fromAddress);
+    m_composer->setFrom(fromAddress);
 
-    m_submission->composer()->setTimestamp(QDateTime::currentDateTime());
-    m_submission->composer()->setSubject(ui->subject->text());
+    m_composer->setTimestamp(QDateTime::currentDateTime());
+    m_composer->setSubject(ui->subject->text());
 
     QAbstractProxyModel *proxy = qobject_cast<QAbstractProxyModel*>(ui->sender->model());
     Q_ASSERT(proxy);
@@ -570,23 +571,23 @@ bool ComposeWidget::buildMessageData()
     if (ui->sender->findText(ui->sender->currentText()) != -1) {
         QModelIndex proxyIndex = ui->sender->model()->index(ui->sender->currentIndex(), 0, ui->sender->rootModelIndex());
         Q_ASSERT(proxyIndex.isValid());
-        m_submission->composer()->setOrganization(
+        m_composer->setOrganization(
                     proxy->mapToSource(proxyIndex).sibling(proxyIndex.row(), Composer::SenderIdentitiesModel::COLUMN_ORGANIZATION)
                     .data().toString());
     }
-    m_submission->composer()->setText(ui->mailText->toPlainText());
+    m_composer->setText(ui->mailText->toPlainText());
 
     if (m_actionInReplyTo->isChecked()) {
-        m_submission->composer()->setInReplyTo(m_inReplyTo);
-        m_submission->composer()->setReferences(m_references);
-        m_submission->composer()->setReplyingToMessage(m_replyingToMessage);
+        m_composer->setInReplyTo(m_inReplyTo);
+        m_composer->setReferences(m_references);
+        m_composer->setReplyingToMessage(m_replyingToMessage);
     } else {
-        m_submission->composer()->setInReplyTo(QList<QByteArray>());
-        m_submission->composer()->setReferences(QList<QByteArray>());
-        m_submission->composer()->setReplyingToMessage(QModelIndex());
+        m_composer->setInReplyTo(QList<QByteArray>());
+        m_composer->setReferences(QList<QByteArray>());
+        m_composer->setReplyingToMessage(QModelIndex());
     }
 
-    return m_submission->composer()->isReadyForSerialization();
+    return m_composer->isReadyForSerialization();
 }
 
 void ComposeWidget::send()
@@ -1239,7 +1240,7 @@ void ComposeWidget::slotAskForFileAttachment()
     QString fileName = QFileDialog::getOpenFileName(this, tr("Attach File..."), QString(), QString(), 0,
                                                     QFileDialog::DontResolveSymlinks);
     if (!fileName.isEmpty()) {
-        m_submission->composer()->addFileAttachment(fileName);
+        m_composer->addFileAttachment(fileName);
     }
 }
 
@@ -1252,7 +1253,7 @@ void ComposeWidget::slotAttachFiles(QList<QUrl> urls)
 #else
         if (url.scheme() == QLatin1String("file")) {
 #endif
-            m_submission->composer()->addFileAttachment(url.path());
+            m_composer->addFileAttachment(url.path());
         }
     }
 }
@@ -1351,7 +1352,7 @@ void ComposeWidget::saveDraft(const QString &path)
         stream << m_recipients.at(i).first->itemData(m_recipients.at(i).first->currentIndex()).toInt();
         stream << m_recipients.at(i).second->text();
     }
-    stream << m_submission->composer()->timestamp() << m_inReplyTo << m_references;
+    stream << m_composer->timestamp() << m_inReplyTo << m_references;
     stream << m_actionInReplyTo->isChecked();
     stream << ui->subject->text();
     stream << ui->mailText->toPlainText();
@@ -1403,7 +1404,7 @@ void ComposeWidget::loadDraft(const QString &path)
     if (version >= 2) {
         QDateTime timestamp;
         stream >> timestamp >> m_inReplyTo >> m_references;
-        m_submission->composer()->setTimestamp(timestamp);
+        m_composer->setTimestamp(timestamp);
         if (!m_inReplyTo.isEmpty()) {
             m_markButton->show();
             // FIXME: in-reply-to's validitiy isn't the best check for showing or not showing the reply mode.

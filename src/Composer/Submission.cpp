@@ -69,21 +69,15 @@ QString submissionProgressToString(const Submission::SubmissionProgress progress
     return QString::fromUtf8("[unknown: %1]").arg(QString::number(static_cast<int>(progress)));
 }
 
-Submission::Submission(QObject *parent, Imap::Mailbox::Model *model, MSA::MSAFactory *msaFactory) :
+Submission::Submission(QObject *parent, Imap::Mailbox::Model *model, MSA::MSAFactory *msaFactory, OutgoingMessage *composer) :
     QObject(parent),
     m_appendUidReceived(false), m_appendUidValidity(0), m_appendUid(0), m_genUrlAuthReceived(false),
     m_saveToSentFolder(false), m_useBurl(false), m_useImapSubmit(false), m_state(STATE_INIT),
     m_msaMaximalProgress(0),
-    m_composer(0), m_model(model), m_msaFactory(msaFactory), m_updateReplyingToMessageFlagsTask(0),
+    m_composer(composer), m_model(model), m_msaFactory(msaFactory), m_updateReplyingToMessageFlagsTask(0),
     m_updateForwardingMessageFlagsTask(0)
 {
-    m_composer = new Composer::MessageComposer(model, this);
     m_composer->setPreloadEnabled(shouldBuildMessageLocally());
-}
-
-MessageComposer *Submission::composer()
-{
-    return m_composer;
 }
 
 Submission::~Submission()

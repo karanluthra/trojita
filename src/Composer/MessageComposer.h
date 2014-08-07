@@ -27,6 +27,7 @@
 #include <QPointer>
 
 #include "Composer/ContentDisposition.h"
+#include "Composer/OutgoingMessage.h"
 #include "Composer/Recipients.h"
 #include "Imap/Model/CatenateData.h"
 #include "Imap/Parser/Message.h"
@@ -42,7 +43,7 @@ namespace Composer {
 class AttachmentItem;
 
 /** @short Model storing individual parts of a composed message */
-class MessageComposer : public QAbstractListModel
+class MessageComposer : public QAbstractListModel, public OutgoingMessage
 {
     Q_OBJECT
 public:
@@ -58,35 +59,29 @@ public:
     virtual QStringList mimeTypes() const;
     virtual QMimeData *mimeData(const QModelIndexList &indexes) const;
 
-    void setFrom(const Imap::Message::MailAddress &from);
-    void setRecipients(const QList<QPair<Composer::RecipientKind, Imap::Message::MailAddress> > &recipients);
     void setInReplyTo(const QList<QByteArray> &inReplyTo);
     void setReferences(const QList<QByteArray> &references);
-    void setTimestamp(const QDateTime &timestamp);
     void setSubject(const QString &subject);
     void setOrganization(const QString &organization);
     void setText(const QString &text);
     void setReplyingToMessage(const QModelIndex &index);
     void prepareForwarding(const QModelIndex &index, const ForwardMode mode);
 
-    bool isReadyForSerialization() const;
-    bool asRawMessage(QIODevice *target, QString *errorMessage) const;
-    bool asCatenateData(QList<Imap::Mailbox::CatenatePair> &target, QString *errorMessage) const;
+    virtual bool isReadyForSerialization() const;
+    virtual bool asRawMessage(QIODevice *target, QString *errorMessage) const;
+    virtual bool asCatenateData(QList<Imap::Mailbox::CatenatePair> &target, QString *errorMessage) const;
 
-    QDateTime timestamp() const;
     QList<QByteArray> inReplyTo() const;
     QList<QByteArray> references() const;
-    QByteArray rawFromAddress() const;
-    QList<QByteArray> rawRecipientAddresses() const;
-    QModelIndex replyingToMessage() const;
-    QModelIndex forwardingMessage() const;
+    virtual QModelIndex replyingToMessage() const;
+    virtual QModelIndex forwardingMessage() const;
 
     bool addFileAttachment(const QString &path);
     void removeAttachment(const QModelIndex &index);
     void setAttachmentContentDisposition(const QModelIndex &index, const ContentDisposition disposition);
     void setAttachmentName(const QModelIndex &index, const QString &newName);
 
-    void setPreloadEnabled(const bool preload);
+    virtual void setPreloadEnabled(const bool preload);
 
 private:
     static QByteArray generateMessageId(const Imap::Message::MailAddress &sender);
@@ -105,11 +100,8 @@ private:
     bool dropImapPart(QDataStream &stream);
     bool dropAttachmentList(QDataStream &stream);
 
-    Imap::Message::MailAddress m_from;
-    QList<QPair<Composer::RecipientKind, Imap::Message::MailAddress> > m_recipients;
     QList<QByteArray> m_inReplyTo;
     QList<QByteArray> m_references;
-    QDateTime m_timestamp;
     QString m_subject;
     QString m_organization;
     QString m_text;

@@ -46,6 +46,7 @@ class QToolButton;
 
 namespace Composer {
 class Submission;
+class MessageComposer;
 }
 
 namespace MSA {
@@ -186,6 +187,7 @@ private:
     QSettings *m_settings;
 
     Composer::Submission *m_submission;
+    Composer::MessageComposer *m_composer;
 
     QMenu *m_completionPopup;
     QLineEdit *m_completionReceiver;
