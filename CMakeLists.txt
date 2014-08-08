@@ -298,6 +298,7 @@ set(libComposer_SOURCES
     ${path_Composer}/OutgoingMessage.cpp
     ${path_Composer}/QuoteText.cpp
     ${path_Composer}/Recipients.cpp
+    ${path_Composer}/RedirectMessageComposer.cpp
     ${path_Composer}/ReplaceSignature.cpp
     ${path_Composer}/SenderIdentitiesModel.cpp
     ${path_Composer}/SubjectMangling.cpp
