@@ -77,27 +77,15 @@ public:
                                       const QString &body, const QList<QByteArray> &inReplyTo, const QList<QByteArray> &references);
     static ComposeWidget *createForward(MainWindow *mainWindow, const Composer::ForwardMode mode, const QModelIndex &forwardingMessage,
                                         const QString &subject, const QList<QByteArray> &inReplyTo, const QList<QByteArray> &references);
+
 protected:
     void changeEvent(QEvent *e);
     void closeEvent(QCloseEvent *ce);
-    bool eventFilter(QObject *o, QEvent *e);
 
 private slots:
-    void calculateMaxVisibleRecipients();
-    void collapseRecipients();
-    void completeRecipient(QAction *act);
-    void completeRecipients(const QString &text);
     void send();
     void gotError(const QString &error);
     void sent();
-    void updateRecipientList();
-    void scrollRecipients(int);
-    void handleFocusChange();
-    void scrollToFocus();
-    void slotFadeFinished();
-
-    void slotCheckAddress();
-    void slotCheckAddress(QLineEdit *edit);
 
     void slotAskForFileAttachment();
     void slotAttachFiles(QList<QUrl> urls);
@@ -125,11 +113,6 @@ private:
     bool setReplyMode(const Composer::ReplyMode mode);
 
     static QByteArray extractMailAddress(const QString &text, bool &ok);
-    static Composer::RecipientKind recipientKindForNextRow(const Composer::RecipientKind kind);
-    void addRecipient(int position, Composer::RecipientKind kind, const QString &address);
-    bool parseRecipients(QList<QPair<Composer::RecipientKind, Imap::Message::MailAddress> > &results, QString &errorMessage);
-    void removeRecipient(int position);
-    void fadeIn(QWidget *w);
     void askPassword(const QString &user, const QString &host);
 
     bool buildMessageData();
@@ -153,11 +136,6 @@ private:
     QAction *m_actionReplyModeAllButMe;
     QAction *m_actionReplyModeAll;
     QAction *m_actionReplyModeList;
-    typedef QPair<QComboBox*, QLineEdit*> Recipient;
-    QList<Recipient> m_recipients;
-    QTimer *m_recipientListUpdateTimer;
-    QPointer<QWidget> m_lastFocusedRecipient;
-    int m_maxVisibleRecipients;
 
     bool m_sentMail;
     /** @short Has it been updated since the last time we auto-saved it? */
@@ -186,11 +164,6 @@ private:
     QSettings *m_settings;
 
     Composer::Submission *m_submission;
-
-    QMenu *m_completionPopup;
-    QLineEdit *m_completionReceiver;
-    int m_completionCount;
-
 
     ComposeWidget(const ComposeWidget &); // don't implement
     ComposeWidget &operator=(const ComposeWidget &); // don't implement

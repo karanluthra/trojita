@@ -364,6 +364,7 @@ set(libDesktopGui_SOURCES
     ${path_DesktopGui}/CompleteMessageWidget.cpp
     ${path_DesktopGui}/ComposeWidget.cpp
     ${path_DesktopGui}/ComposerAttachmentsList.cpp
+    ${path_DesktopGui}/EnvelopeFormWidget.cpp
     ${path_DesktopGui}/ComposerTextEdit.cpp
     ${path_DesktopGui}/EmbeddedWebView.cpp
     ${path_DesktopGui}/EnvelopeView.cpp
@@ -404,6 +405,7 @@ set(libDesktopGui_UI
     ${path_DesktopGui}/ComposeWidget.ui
     ${path_DesktopGui}/CreateMailboxDialog.ui
     ${path_DesktopGui}/EditIdentity.ui
+    ${path_DesktopGui}/EnvelopeFormWidget.ui
     ${path_DesktopGui}/PasswordDialog.ui
     ${path_DesktopGui}/ProgressPopUp.ui
     ${path_DesktopGui}/SettingsCachePage.ui
